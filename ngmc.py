@@ -1,15 +1,25 @@
 #!/usr/bin/env python
 
 from flask import Flask, make_response
-from flask import request, redirect, render_template
+from flask import request, redirect, render_template, url_for
 from flaskext.zodb import ZODB
 
 app = Flask(__name__)
-app.config['ZODB_STORAGE'] = 'file://ngmc.fs'
+#app.config['ZODB_STORAGE'] = 'file:///export/home/lyx/opt/lyx/web/ngmc.fs'
+app.config['ZODB_STORAGE'] = 'zeo://localhost:1234'
 
 db = ZODB(app)
 
-@app.route("/")
+@app.route('/',methods=['GET','POST'])
+def index():
+    if request.method == 'POST':
+        db['shoutout'] = request.form['message']
+        return redirect(url_for('index'))
+    else:
+        message = db.get('shoutout','Be the first to shout!')
+        return render_template('index.html',message=message)
+
+@app.route("/hello")
 def hello():
     return "Hello World!"
 
@@ -37,5 +47,6 @@ def simple():
 
 
 if __name__ == "__main__":
+    app.debug = True
     app.run()
 
