@@ -13,7 +13,8 @@ import uuid
 import math
 import datetime
 
-import ZODB.config
+from zodburi import resolve_uri
+from ZODB.DB import DB
 import transaction
 from persistent import Persistent
 from persistent.mapping import PersistentMapping
@@ -26,7 +27,9 @@ from ngofflattice_kooi import Param as FileParam
 from ngutil import now2str
 
 def connect_zodb(zodb_URI):
-    db = ZODB.config.databaseFromURL(zodb_URI)
+    storage_factory,dbkw = resolve_uri(zodb_URI)
+    storage = storage_factory()
+    db = DB(storage,**dbkw)
     return db.open()
 
 

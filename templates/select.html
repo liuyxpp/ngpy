@@ -1,0 +1,11 @@
+{% extends "layout.html" %}
+{% block title %}Select a Simulation{% endblock %}
+{% block body %}
+  <h2>Select a Simulation</h2>
+  {% if error %}<div class=error><strong>Error:</strong> {{ error }}</div>{% endif %}
+  <form action="" method="POST">
+    <div>{{ form.simulations.label }}:{{ form.simulations(size=10) }}</div>
+    <div class=actions><input type=submit value="Select"></div>
+  </form>
+{% endblock %}
+

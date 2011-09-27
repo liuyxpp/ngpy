@@ -1,18 +1,12 @@
 <!doctype html>
-<title>{% block title %}Welcome{% endblock %} | MiniTwit</title>
+<title>{% block title %}Welcome{% endblock %} | NGPy</title>
 <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
 <div class=page>
-  <h1>MiniTwit</h1>
+  <h1>NGPy</h1>
   <div class=navigation>
-  {% if g.user %}
-    <a href="{{ url_for('timeline') }}">my timeline</a> |
-    <a href="{{ url_for('public_timeline') }}">public timeline</a> |
-    <a href="{{ url_for('logout') }}">sign out [{{ g.user.username }}]</a>
-  {% else %}
-    <a href="{{ url_for('public_timeline') }}">public timeline</a> |
-    <a href="{{ url_for('register') }}">sign up</a> |
-    <a href="{{ url_for('login') }}">sign in</a>
-  {% endif %}
+    <a href="{{ url_for('index') }}">home</a> |
+    <a href="{{ url_for('simple') }}">simple.png</a> |
+    <a href="{{ url_for('live_simulation') }}">live</a>
   </div>
   {% with flashes = get_flashed_messages() %}
     {% if flashes %}
@@ -27,6 +21,6 @@
   {% block body %}{% endblock %}
   </div>
   <div class=footer>
-    MiniTwit &mdash; A Flask Application
+    NGPy &mdash; A Flask Application by Yi-Xin Liu (liuyxpp@gmail.com)
   </div>
 </div>
