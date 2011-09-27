@@ -15,8 +15,6 @@
 import uuid
 import math
 import datetime
-import copy
-import signal
 import sys
 
 import numpy as np
@@ -38,30 +36,7 @@ from ngofflattice_kooi import particle_SM_nucleation,particle_SM_growth
 
 #from ngzodb import Particles # a Persistent object of list of particles
 from ngzodb import connect_zodb,setup_simulation
-
-def signal_handler(signum,frame):
-    print "SIGINT received."
-    transaction.abort()
-    #dbconn = connect_zodb(zodb_URI)
-    global dbconn
-    dbroot = dbconn.root()
-    simulations = dbroot['simulations']
-    simulation = simulations[sim_id]
-    retry = 0
-    while retry < 3:
-        try:
-            simulation['status'] = 'ABORT'
-            transaction.commit()
-        except ConflictError:
-            retry += 1
-            time.sleep(1)
-            pass
-        else:
-            break
-    dbconn.close()
-    print 'simulation:',sim_id,'status set to ABORT.'
-    sys.exit(0)
-
+from ngutil import now2str
 
 def ngrun(dbconn,sim_id):
     dbroot = dbconn.root()
@@ -121,11 +96,13 @@ def ngrun(dbconn,sim_id):
         except KeyboardInterrupt:
             transaction.abort()
             simulation['status'] = 'ABORT'
+            simulation['abort_time'] = now2str()
             transaction.commit()
             sys.exit(0)
 
     simulation['particle_seed'] = particle_seed
     simulation['status'] = 'FINISH'
+    simulation['finish_time'] = now2str()
     transaction.commit()
 
 
@@ -135,8 +112,6 @@ if __name__ == '__main__':
     dbconn = connect_zodb(zodb_URI)
     sim_id = setup_simulation(dbconn,params)
 
-    # handle the Ctrl + C interruption
-    #signal.signal(signal.SIGINT,signal_handler)
     ngrun(dbconn,sim_id)
     dbconn.close()
 

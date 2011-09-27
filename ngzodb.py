@@ -23,6 +23,8 @@ from particle import Particle
 from vector2d import Vector2D
 from ngofflattice_kooi import Param as FileParam
 
+from ngutil import now2str
+
 def connect_zodb(zodb_URI):
     db = ZODB.config.databaseFromURL(zodb_URI)
     return db.open()
@@ -39,7 +41,7 @@ def setup_simulation(dbconn,params):
     simulation = PersistentMapping({
         'parameter':params,
         'status':'READY',
-        'create_time':datetime.datetime.now()
+        'create_time':now2str()
         })
     simulations[sim_id] = simulation
     transaction.commit()
