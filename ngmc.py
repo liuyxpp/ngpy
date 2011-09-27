@@ -6,7 +6,7 @@ from flaskext.zodb import ZODB
 
 app = Flask(__name__)
 #app.config['ZODB_STORAGE'] = 'file:///export/home/lyx/opt/lyx/web/ngmc.fs'
-app.config['ZODB_STORAGE'] = 'zeo://localhost:1234'
+app.config['ZODB_STORAGE'] = 'zconfig://' + app.root_path + '/zeo.conf'
 
 db = ZODB(app)
 
