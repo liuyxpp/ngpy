@@ -42,7 +42,8 @@ from ngzodb import connect_zodb,setup_simulation
 def signal_handler(signum,frame):
     print "SIGINT received."
     transaction.abort()
-    dbconn = connect_zodb(zodb_URI)
+    #dbconn = connect_zodb(zodb_URI)
+    global dbconn
     dbroot = dbconn.root()
     simulations = dbroot['simulations']
     simulation = simulations[sim_id]
@@ -75,9 +76,6 @@ def ngrun(dbconn,sim_id):
     particle_SM_inactive = []
     area_untransformed = []
     dn =0
-
-    # handle the Ctrl + C interruption
-    signal.signal(signal.SIGINT,signal_handler)
 
     simulation['status'] = 'ACTIVE'
     transaction.commit()
@@ -117,8 +115,14 @@ def ngrun(dbconn,sim_id):
             'particle_SM_active':PersistentList(particle_SM_active),
             'particle_SM_inactive':PersistentList(particle_SM_inactive)
             })
-        frames[index] = frame
-        transaction.commit()
+        try:
+            frames[index] = frame
+            transaction.commit()
+        except KeyboardInterrupt:
+            transaction.abort()
+            simulation['status'] = 'ABORT'
+            transaction.commit()
+            sys.exit(0)
 
     simulation['particle_seed'] = particle_seed
     simulation['status'] = 'FINISH'
@@ -131,7 +135,8 @@ if __name__ == '__main__':
     dbconn = connect_zodb(zodb_URI)
     sim_id = setup_simulation(dbconn,params)
 
-
+    # handle the Ctrl + C interruption
+    #signal.signal(signal.SIGINT,signal_handler)
     ngrun(dbconn,sim_id)
     dbconn.close()
 
