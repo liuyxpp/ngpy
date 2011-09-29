@@ -1,12 +1,15 @@
 {% extends "layout.html" %}
+{% from "_formhelpers.html" import render_field %}
 {% block title %}Update a Simulation{% endblock %}
 {% block body %}
   <h2>Update a Simulation</h2>
   {% if error %}<div class=error><strong>Error:</strong> {{ error }}</div>{% endif %}
   <form action="" method="POST">
+    <dl>
     {% for field in form %}
-    <div>{{ field.label }}:{{ field() }}</div>
+        {{ render_field(field) }}
     {% endfor %}
+    </dl>
     <div class=actions><input type=submit value="Update"></div>
   </form>
 {% endblock %}

@@ -22,6 +22,7 @@ class FormParam(Persistent):
     def __init__(self,form):
         self.lx = form.lx.data
         self.Lx = form.Lx.data
+        self.Ly = self.Lx
         self.ly = self.lx
         self.dx = self.lx/self.Lx
         self.dy = self.dx

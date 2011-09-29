@@ -19,17 +19,19 @@ from ngutil import FormParam
 
 @app.route('/',methods=['GET','POST'])
 def index():
-    if request.method == 'POST':
-        db['shoutout'] = request.form['message']
-        return redirect(url_for('index'))
-    else:
-        message = db.get('shoutout','Be the first to shout!')
-        return render_template('index.html',message=message)
-
-
-@app.route("/hello")
-def hello():
-    return "Hello World!"
+    simulations = db['simulations']
+    new_simulations = []
+    active_simulations = []
+    for k in simulations.keys():
+        if simulations[k]['status'] == 'NEW':
+            new_simulations.append(str(k))
+        if simulations[k]['status'] == 'ACTIVE':
+            active_simulations.append(str(k))
+    return render_template(
+        'index.html',
+        new_simulations=new_simulations,
+        active_simulations=active_simulations,
+    )
 
 
 @app.route("/simple.png")
@@ -54,19 +56,50 @@ def simple():
     return response
 
 
-@app.route("/create",methods=['Get','POST'])
+@app.route("/create/",methods=['Get','POST'])
 def new_simulation():
     form = NewSimulationForm()
     simulations = db['simulations']
     if form.validate_on_submit():
         params = FormParam(form)
         sim_id = setup_simulation(db,params)
-        return redirect(url_for('browse_simulation',sim_id=sim_id))
+        return redirect(url_for('view_simulation',sim_id=sim_id))
     else:
         return render_template('new.html',form=form)
 
+@app.route('/view/<sim_id>',methods=['GET','POST'])
+def view_simulation(sim_id):
+    simulations = db['simulations']
+    sim_uuid = uuid.UUID(sim_id)
+    if not simulations.has_key(sim_uuid):
+        return redirect(url_for('index'))
+    simulation = simulations[sim_uuid]
+    num_frames = 0
+    if simulation.has_key('frames'):
+        num_frames = len(simulation['frames'])
+    update_time = None
+    if simulation.has_key('update_time'):
+        update_time = simulation['update_time']
+    abort_time = None
+    if simulation.has_key('abort_time'):
+        abort = simulation['abort_time']
+    finish_time = None
+    if simulation.has_key('finish_time'):
+        finish_time = simulation['finish_time']
+    return render_template(
+        'view.html',
+        sim_id=sim_id,
+        params=simulation['parameter'],
+        status=simulation['status'],
+        create_time=simulation['create_time'],
+        update_time=update_time,
+        abort_time=abort_time,
+        finish_time=finish_time,
+        num_frames=num_frames
+    )
 
-@app.route("/edit",methods=['GET','POST'])
+
+@app.route("/edit/",methods=['GET','POST'])
 def issue_edit():
     form = SelectSimulationForm()
     simulations = db['simulations']
@@ -92,12 +125,12 @@ def edit_simulation(sim_id):
     if form.validate_on_submit():
         p = FormParam(form)
         update_simulation(db,sim_uuid,p)
-        return redirect(url_for('browse_simulation',sim_id=sim_id))
+        return redirect(url_for('view_simulation',sim_id=sim_id))
     else:
         return render_template('update.html',form=form)
 
 
-@app.route("/delete",methods=['GET','POST'])
+@app.route("/delete/",methods=['GET','POST'])
 def delete_simulation():
     form = SelectSimulationForm()
     simulations = db['simulations']
@@ -113,13 +146,13 @@ def delete_simulation():
         return render_template('delete.html',form=form)
 
 
-@app.route("/select",methods=['GET','POST'])
+@app.route("/simulations/",methods=['GET','POST'])
 def select_simulation():
     form = SelectSimulationForm()
     simulations = db['simulations']
     if request.method == 'POST':
         sim_id = form.simulations.data
-        return redirect(url_for('browse_simulation',sim_id=sim_id))
+        return redirect(url_for('view_simulation',sim_id=sim_id))
     else:
         form.simulations.choices = [
             (str(sim_id),str(sim_id)) for sim_id in simulations.keys()
@@ -134,8 +167,8 @@ def browse_simulation(sim_id):
     return simulation['status']
 
 
-@app.route("/live")
-def live_simulation():
+@app.route("/live/<sim_id>")
+def live_simulation(sim_id):
     return 'Live Simulation'
 
 

@@ -4,9 +4,11 @@
 <div class=page>
   <h1>NGPy</h1>
   <div class=navigation>
-    <a href="{{ url_for('index') }}">home</a> |
-    <a href="{{ url_for('simple') }}">simple.png</a> |
-    <a href="{{ url_for('live_simulation') }}">live</a>
+    <a href="{{ url_for('index') }}">Home</a> |
+    <a href="{{ url_for('select_simulation') }}">Simulations</a> |
+    <a href="{{ url_for('new_simulation') }}">Create</a> |
+    <a href="{{ url_for('issue_edit') }}">Edit</a> |
+    <a href="{{ url_for('delete_simulation') }}">Delete</a> |
   </div>
   {% with flashes = get_flashed_messages() %}
     {% if flashes %}

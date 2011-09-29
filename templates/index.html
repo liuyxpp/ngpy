@@ -1,6 +1,17 @@
-<h1>{{ message }} </h1>
-
-<form action="{{ url_for('index') }}" method=POST>
-    <input name=message>
-    <button type=submit>Post!</button>
-</form>
+{% extends "layout.html" %}
+{% block title %}New and Active Simulations{% endblock %}
+{% block body %}
+  <h2>New Simulations</h2>
+  <ul>
+  {% for simulation in new_simulations %}
+    <li><a href="{{ url_for('view_simulation',sim_id=simulation) }}">{{ simulation }}</a></li>
+  {% endfor %}
+  </ul>
+  <h2>Current Active Simulations</h2>
+  <ul>
+  {% for simulation in active_simulations %}
+    <li><a href="{{ url_for('view_simulation',sim_id=simulation) }}">{{ simulation }}</a></li>
+  {% endfor %}
+  </ul>
+  {% if error %}<div class=error><strong>Error:</strong> {{ error }}</div>{% endif %}
+{% endblock %}
