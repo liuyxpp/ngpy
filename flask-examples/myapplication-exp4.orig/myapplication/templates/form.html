@@ -1,0 +1,30 @@
+{% if form.errors %}
+<p class="errors">
+The following fields have errors: 
+    {% for error in form.errors %}
+    {{ error }} 
+    {% endfor %}
+</p>
+{% endif %}
+
+<form method="POST">
+    {% for field in form %}
+    <div class="row">
+        <div class="col col_16">
+        {{ field.label }}
+        {{ field }}
+        </div>
+        {% if field.errors %}
+        <div>
+        {% for error in field.errors %}
+        <p>{{ error }}</p>
+        {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    <div class="col col_16">
+        <input type="submit" value="Send" />
+        <input type="reset" value="Reset Form" />
+    </div>
+</form>

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% if error %}
+<div style="padding:10px; border:1px solid red;">
+<p style="margin-bottom:2px;"><b>There's a problem with your form.</b></p>
+{{ error }}
+</div>
+{% endif %}
+<h2>Login Form</h2>
+<form method="POST">
+    <div class="clear">
+        <div class="span-2">
+            <label for="id_username">Username:</label>
+        </div>
+        <input id="id_username" name="username" />
+    </div>
+    <div class="clear">
+        <div class="span-2">
+            <label for="id_password">Password:</label>
+        </div>
+        <input id="id_password" name="password" />
+    </div>
+    <div class="clear">
+        <input type="submit" value="Send" />
+        <input type="reset" value="Reset" />
+    </div>
+</form>
+{% endblock %}

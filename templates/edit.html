@@ -1,11 +1,11 @@
 {% extends "layout.html" %}
-{% block title %}Select a Simulation{% endblock %}
+{% block title %}Edit a Simulation{% endblock %}
 {% block body %}
-  <h2>Select a Simulation</h2>
+  <h2>Edit a Simulation</h2>
   {% if error %}<div class=error><strong>Error:</strong> {{ error }}</div>{% endif %}
   <form action="" method="POST">
     <div>{{ form.simulations.label }}:{{ form.simulations() }}</div>
-    <div class=actions><input type=submit value="Select"></div>
+    <div class=actions><input type=submit value="Edit"></div>
   </form>
 {% endblock %}
 

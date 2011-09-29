@@ -1,0 +1,6 @@
+{% set flash_messages = get_flashed_messages() %}
+{% if flash_messages %}
+    {% for msg in flash_messages %}
+        <p>flash msg: {{ msg }}</p>
+    {% endfor %}
+{% endif %}

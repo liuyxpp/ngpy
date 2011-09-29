@@ -12,16 +12,10 @@
     :copyright: (c) 2011 by Yi-Xin Liu (liuyxpp@gmail.com).
     :license: BSD, see LICENSE for more details.
 """
-import uuid
 import math
-import datetime
 import sys
 
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
-import ZODB.config
-from ZODB.POSException import ConflictError
+#from ZODB.POSException import ConflictError
 import transaction
 from BTrees import IOBTree
 from persistent.list import PersistentList
@@ -30,17 +24,16 @@ from persistent.mapping import PersistentMapping
 from particle import Particle
 from vector2d import Vector2D
 from ngofflattice_kooi import Param as FileParam
-from ngofflattice_kooi import calc_area_M, calc_num_nucleation
-from ngofflattice_kooi import is_in_particle_list, is_touch_particle
+from ngofflattice_kooi import calc_num_nucleation
 from ngofflattice_kooi import particle_SM_nucleation,particle_SM_growth
 
 #from ngzodb import Particles # a Persistent object of list of particles
-from ngzodb import connect_zodb,setup_simulation
+from ngzodb import setup_simulation
 from ngutil import now2str
+from database import db
 
-def ngrun(dbconn,sim_id):
-    dbroot = dbconn.root()
-    simulations = dbroot['simulations']
+def ngrun(sim_id):
+    simulations = db['simulations']
     simulation = simulations[sim_id]
     p = simulation['parameter']
 
@@ -108,10 +101,7 @@ def ngrun(dbconn,sim_id):
 
 if __name__ == '__main__':
     params = FileParam('ngrc.ini')
-    zodb_URI = params.database
-    dbconn = connect_zodb(zodb_URI)
-    sim_id = setup_simulation(dbconn,params)
+    sim_id = setup_simulation(params)
 
-    ngrun(dbconn,sim_id)
-    dbconn.close()
+    ngrun(sim_id)
 

@@ -1,0 +1,11 @@
+{% extends "admin/base.html" %}
+{% block title %}
+ - Creating new {{ admin_model['name'] }} 
+{% endblock %}
+
+{% block content %}
+<h4><a href="{{ url_for('admin.list', model_name=admin_model['name']) }}">Back</a></h4>
+
+<h2>Create new {{ admin_model['name'] }}</h2>
+{% include "form.html" %}
+{% endblock %}

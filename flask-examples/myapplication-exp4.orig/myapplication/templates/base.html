@@ -1,0 +1,50 @@
+<!DOCTYPE HTML> {# HTML5 #}
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="author" content="Italo Moreira Campelo Maia" />
+    
+    {# The 'dot' in url_for('.static') is very important. Without it, #}
+    {# the application won't look in the project static folder, but in #}
+    {# the module static folder. #}
+    
+    <!-- CSS Framework -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('.static', filename='css/reset.css') }}" media="screen, projection" title="html5doctor.com Reset Stylesheet" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('.static', filename='css/general.css') }}" media="screen, projection" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('.static', filename='css/grid.css') }}" media="screen, projection" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('.static', filename='css/styles.css') }}" media="screen, projection" />
+
+    <title>{% block title %}Your Application{% endblock %}</title>
+</head>
+
+<body>
+<div id="page-content" class="row">
+    {% include "flash_msg.html" %}
+    <nav class="main">
+        <a href="/">MyApplication</a>
+        {% if session and session['logged_in'] %}
+        <a href="{{ url_for('.auth.logout') }}">Sign Out</a>
+        {% else %}
+        <a href="{{ url_for('.auth.login') }}">Sign In</a>
+        {% endif %}
+    </nav>
+    <aside id="left_column" class="col_4 col">
+        <nav>
+            {% block nav_column %}...{% endblock %}
+        </nav>
+    </aside>
+    <article id="right_column" class="content col_12 col">
+        {% block content %}
+        This will be overwritten by other templates.
+        {% endblock %}
+    </article>
+    <footer style="text-align:center">
+        <span class="small">
+            This is a simple "growing big" example for <a href="http://flask.pocoo.org/">Flask</a>. 
+            Read it with attention.
+        </span>
+    </footer>
+</div>
+</body>
+
+</html>

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block nav_column %}
+{% if in_menu_count %}
+    <ul>
+    {% for item in show_in_menu %}
+        <li><a href="{{ url_for('index', page_id=item.id) }}">&#62; {{ item }}</a></li>
+    {% endfor %}
+    </ul>
+{% else %}
+{{ super() }}
+{% endif %}
+
+{% endblock %} {# endblock nav_column #}
+
+{% block content %}
+<h1>Index page [index.html]</h1>
+<h3>Extends [base.html]</h3>
+
+{% if page %}
+    <article>
+    <header>
+        <a href="{{ url_for('index', page_id=page.id) }}">
+            <h2>{{ page.pagename }}</h2>
+        </a>
+    </header>
+    <section>
+        {{ page.content }}
+    </section>
+    </article>
+{% else %}
+    {% if queryset_count %}
+    {% for page in queryset %}
+    <article>
+    <header>
+        <a href="{{ url_for('index', page_id=page.id) }}">
+            <h2>{{ page.pagename }}</h2>
+        </a>
+    </header>
+    <section>
+        {{ page.content }}
+    </section>
+    </article>
+    {% endfor %}
+    {% else %}
+    <p>MyApplication Main page</p>
+    {% endif %}
+
+{% endif %}
+{% endblock %} {# end block content #}

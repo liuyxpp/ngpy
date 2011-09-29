@@ -1,0 +1,10 @@
+{% extends "admin/base.html" %}
+{% block title %}
+ - Edit 
+{% endblock %}
+
+{% block content %}
+<h4><a href="{{ url_for('admin.list', model_name=admin_model['name']) }}">Back</a></h4>
+<h2>Editing `{{ admin_model['name'] }}` {{ obj }}</h2>
+{% include "form.html" %}
+{% endblock %}

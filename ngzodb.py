@@ -33,22 +33,33 @@ def connect_zodb(zodb_URI):
     return db.open()
 
 
-def setup_simulation(dbconn,params):
-    dbroot = dbconn.root()
-    if not dbroot.has_key('simulations'):
-        dbroot['simulations'] = OOBTree.OOBTree()
+def setup_simulation(db,params):
+    if not db.has_key('simulations'):
+        db['simulations'] = OOBTree.OOBTree()
         transaction.commit()
 
     sim_id = uuid.uuid4()
-    simulations = dbroot['simulations']
+    simulations = db['simulations']
     simulation = PersistentMapping({
         'parameter':params,
-        'status':'READY',
+        'status':'NEW',
         'create_time':now2str()
         })
     simulations[sim_id] = simulation
     transaction.commit()
     return sim_id
+
+
+def update_simulation(db,sim_id,params):
+    simulations = db['simulations']
+    if not simulations.has_key(sim_id):
+        return
+    simulation = simulations[sim_id]
+    simulation['parameter'] = params
+    simulation['status'] = 'UPDATE'
+    simulation['update_time'] = now2str()
+    simulations[sim_id] = simulation
+    transaction.commit()
 
 
 def Particles(Persistent):
@@ -59,9 +70,7 @@ def Particles(Persistent):
 def test():
     print 'Setup a simulation to run.'
     params = FileParam('ngrc.ini')
-    zodb_URI = params.database
-    dbconn = connect_zodb(zodb_URI)
-    sim_id = setup_simulation(dbconn,params)
+    sim_id = setup_simulation(params)
     dbconn.close()
     print 'Delete the simulation which is just created'
     dbconn = connect_zodb(zodb_URI)

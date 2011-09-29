@@ -11,10 +11,31 @@
 """
 
 import datetime
+from persistent import Persistent
 
 # ISO 8601. For recovering the datetime object from the datestring stored in
 # ZODB database
 ISO_TIME_FORMAT = '%Y-%m-%dT%H:%M:%S.%f'
+
+
+class FormParam(Persistent):
+    def __init__(self,form):
+        self.lx = form.lx.data
+        self.Lx = form.Lx.data
+        self.ly = self.lx
+        self.dx = self.lx/self.Lx
+        self.dy = self.dx
+        self.dt = form.dt.data
+        self.Nx = int(round(1/self.dt))
+        self.max_t = form.max_t.data
+        self.k_MA = form.k_MA.data
+        self.nu_MA = form.nu_MA.data
+        self.r0_SM = self.dx/2.0
+        self.k_SM = form.k_SM.data
+        self.nu_SM = form.nu_SM.data
+        self.n_SM = form.n_SM.data
+        self.r_seed = form.r_seed.data
+        self.r_test = form.r_test.data
 
 def str2time(iso_datetime_str):
     return datetime.datetime.strptime(iso_datetime_str,ISO_TIME_FORMAT)

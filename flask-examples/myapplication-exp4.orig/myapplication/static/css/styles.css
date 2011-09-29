@@ -1,0 +1,11 @@
+nav{ background-color: #abc; padding: 5px 10px 12px 10px}
+nav a{ color: white; text-decoration: none;}
+nav a:hover{ text-decoration:underline; }
+aside nav{ padding: 5px 10px }
+aside nav a{ font-weight:bold }
+nav.main{ 
+    margin-bottom:2em; 
+    font-weight:bold; 
+    border-radius: 0px 0px 10px 10px;
+    -moz-border-radius: 0px 0px 10px 10px}
+

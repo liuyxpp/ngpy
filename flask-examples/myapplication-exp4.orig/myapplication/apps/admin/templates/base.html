@@ -1,0 +1,33 @@
+<!DOCTYPE HTML> {# HTML5 ; ) #}
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="author" content="Italo Moreira Campelo Maia" />
+    
+    {# The 'dot' in url_for('.static') is very important. Without it, #}
+    {# the application won't look in the project static folder, but in #}
+    {# the module static folder. #}
+    
+    <!-- CSS Framework -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('.static', filename='css/reset.css') }}" media="screen, projection" title="html5doctor.com Reset Stylesheet" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('.static', filename='css/general.css') }}" media="screen, projection" />
+    <link rel="stylesheet" type="text/css" href="{{ url_for('.static', filename='css/grid.css') }}" media="screen, projection" />
+    
+    <link media="screen, projection" rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}" type="text/css"  />
+    
+    <title>Admin Module{% block title %}{% endblock %}</title>
+</head>
+<body>
+<div class="admin">
+    {% include "flash_msg.html" %}
+    <header class="row">
+        <div class="main">
+            <h1><a href="{{ url_for('admin.index') }}">Admin Page</a></h1>
+        </div>
+    </header>
+    <div class="row content">
+        {% block content %}{% endblock %}
+    </div>
+</div>
+</body>
+</html>

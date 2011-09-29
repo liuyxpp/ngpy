@@ -1,0 +1,15 @@
+{% extends "admin/base.html" %}
+{% block title %}
+ - Listing all registered models
+{% endblock %}
+
+{% block content %}
+<h2>All Models</h2>
+<ol>
+    {% for admin_model in admin_models %}
+    <li><b>{{ admin_model }}</b> - 
+        <a href="{{ url_for('admin.list', model_name=admin_model) }}">List</a> 
+        <a href="{{ url_for('admin.create', model_name=admin_model) }}">Create</a></li>
+    {% endfor %}    
+</ol>
+{% endblock %}

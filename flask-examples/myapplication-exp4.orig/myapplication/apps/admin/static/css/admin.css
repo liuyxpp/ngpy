@@ -1,0 +1,12 @@
+div.admin header{ 
+    background-color:#abc; 
+    border-radius: 0px 0px 10px;
+    -moz-border-radius: 0px 0px 10px 10px;
+    margin-bottom:10px;
+}
+div.admin header div.main{ margin-left:10px; }
+div.admin header a{ color: white; text-decoration: none;}
+div.admin header a:hover{ text-decoration: underline;}
+
+div.content a{ font-weight:bold; color: #abb }
+div.content h1, div.content h2{ color:#abc; }

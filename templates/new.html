@@ -1,0 +1,13 @@
+{% extends "layout.html" %}
+{% block title %}Create a Simulation{% endblock %}
+{% block body %}
+  <h2>Create a Simulation</h2>
+  {% if error %}<div class=error><strong>Error:</strong> {{ error }}</div>{% endif %}
+  <form action="" method="POST">
+    {% for field in form %}
+    <div>{{ field.label }}:{{ field() }}</div>
+    {% endfor %}
+    <div class=actions><input type=submit value="Create"></div>
+  </form>
+{% endblock %}
+

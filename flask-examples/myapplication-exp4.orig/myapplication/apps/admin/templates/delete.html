@@ -1,0 +1,14 @@
+{% extends "admin/base.html" %}
+{% block title %}
+ - Delete {{ admin_model['name'] }}
+{% endblock %}
+
+{% block content %}
+<h4><a href="{{ url_for('admin.list', model_name=admin_model['name']) }}">Back</a></h4>
+<h2>Editing `{{ admin_model['name'] }}` {{ obj }}</h2>
+<p>Are you sure you want to delete {{ admin_model['name'] }} {{ obj }}?</p>
+<form method="POST">
+<input type="submit" value="YES!" />
+<a href="{{ url_for('admin.list', model_name=admin_model['name']) }}"><input type="button" value="no." /></a>
+</form>
+{% endblock %}
