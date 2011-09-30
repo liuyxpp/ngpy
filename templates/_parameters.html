@@ -1,0 +1,20 @@
+{% macro render_parameters(params) %}
+  <h3>Parameters</h3>
+    <div>lx = {{ params.lx }}</div>
+    <div>ly = {{ params.ly }}</div>
+    <div>Lx = {{ params.Lx }}</div>
+    <div>Ly = {{ params.Ly }}</div>
+    <div>dx = {{ params.dx }}</div>
+    <div>dy = {{ params.dy }}</div>
+    <div>dt = {{ params.dt }}</div>
+    <div>Nx = {{ params.Nx }}</div>
+    <div>max_t = {{ params.max_t }}</div>
+    <div>k_MA = {{ params.k_MA }}</div>
+    <div>nu_MA = {{ params.nu_MA }}</div>
+    <div>r0_SM = {{ params.r0_SM }}</div>
+    <div>k_SM = {{ params.k_SM }}</div>
+    <div>nu_SM = {{ params.nu_SM }}</div>
+    <div>n_SM = {{ params.n_SM }}</div>
+    <div>r_seed = {{ params.r_seed }}</div>
+    <div>r_test = {{ params.r_test }}</div>
+{% endmacro %}

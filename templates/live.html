@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% from "_parameters.html" import render_parameters %}
+{% block title %}Live Show a Simulation{% endblock %}
+{% block body %}
+  <h2>Live Show a Simulation</h2>
+  <h3>Simulation {{ sim_id }}</h3>
+  <div>Current frame: {{ None if frame_id==-1 else frame_id }}</div>
+  <div><a href="{{ url_for('live_simulation',sim_id=sim_id) }}">Refresh.</a></div>
+  <div>You can <a href="{{ url_for('browse_simulation',sim_id=sim_id,frame=frame_id) }}">Browse This Simulation.</a></div>
+  <div>You can <a href="{{ url_for('abort_simulation',sim_id=sim_id) }}">Abort This Simulation.</a></div>
+  {% if not frame_id == -1 %}
+  <img src="{{ url_for('render_simulation_frame',sim_id=sim_id,frame=frame_id) }}" alt="loading..." /> 
+  {% endif %}
+  {{ render_parameters(params) }}
+  {% if error %}<div class=error><strong>Error:</strong> {{ error }}</div>{% endif %}
+{% endblock %}
