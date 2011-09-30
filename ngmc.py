@@ -12,8 +12,7 @@ db = ZODB(app)
 jobs = {}
 
 from views import *
-from ngplot import render_simulation_frame
 
 if __name__ == "__main__":
-    app.run()
+    app.run(host='0.0.0.0')
 

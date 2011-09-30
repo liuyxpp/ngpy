@@ -10,3 +10,7 @@
 
 * PUSH source to Bitbucket
     hg push https://liuyxpp@bitbucket.org/liuyxpp/ngpy
+
+* Pack ZODB database
+    zeopack localhost:1234
+    rm -f test.fs.old

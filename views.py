@@ -1,4 +1,6 @@
 import multiprocessing
+import os
+import signal
 import uuid
 
 from flask import make_response, render_template
@@ -76,9 +78,12 @@ def view_simulation(sim_id):
     update_time = None
     if simulation.has_key('update_time'):
         update_time = simulation['update_time']
+    run_time = None
+    if simulation.has_key('run_time'):
+        run_time = simulation['run_time']
     abort_time = None
     if simulation.has_key('abort_time'):
-        abort = simulation['abort_time']
+        abort_time = simulation['abort_time']
     finish_time = None
     if simulation.has_key('finish_time'):
         finish_time = simulation['finish_time']
@@ -89,6 +94,7 @@ def view_simulation(sim_id):
         status=simulation['status'],
         create_time=simulation['create_time'],
         update_time=update_time,
+        run_time=run_time,
         abort_time=abort_time,
         finish_time=finish_time,
         num_frames=num_frames
@@ -172,6 +178,7 @@ def browse_simulation(sim_id):
     frame_id = eval(request.args.get('frame','0'))
     frame_max = len(simulation['frames']) - 1
     return render_template('browse.html',
+                           params=simulation['parameter'],
                            sim_id=sim_id,frame_id=frame_id,
                            frame_max=frame_max)
 
@@ -192,16 +199,30 @@ def abort_simulation(sim_id):
     sim_uuid = uuid.UUID(sim_id)
     simulation = simulations[sim_uuid]
     if jobs.has_key(sim_id):
-        job = jobs[sim_id]
-        job.terminate()
-        job.join()
-    if simulation['status'] == 'ACTIVE':
-        simulation['status'] = 'ABORT'
-        simulation['abort_time'] == now2str()
+        job = jobs.pop(sim_id)
+        if job.is_alive():
+            #os.kill(job.pid,signal.SIGINT)
+            job.terminate()
+            job.join()
+        if not job.is_alive() and simulation['status'] == 'ACTIVE':
+            simulation['status'] = 'ABORT'
+            simulation['abort_time'] = now2str()
     return redirect(url_for('index'))
 
 
 @app.route("/live/<sim_id>")
 def live_simulation(sim_id):
-    return 'Live Simulation '+sim_id
+    simulations = db['simulations']
+    simulation = simulations[uuid.UUID(sim_id)]
+    if simulation['status'] != 'ACTIVE' and simulation['status'] != 'NEW':
+        return redirect(url_for('browse_simulation',sim_id=sim_id))
+    if not simulation.has_key('frames'):
+        frame_id = -1
+        return render_template('live.html',
+                           params=simulation['parameter'],
+                           sim_id=sim_id,frame_id=frame_id)
+    frame_id = len(simulation['frames']) - 1
+    return render_template('live.html',
+                           params=simulation['parameter'],
+                           sim_id=sim_id,frame_id=frame_id)
 

@@ -54,6 +54,7 @@ def ngrun(zodb_URI,sim_id):
     area_untransformed = []
     dn = 0
 
+    simulation['run_time'] = now2str()
     simulation['status'] = 'ACTIVE'
     simulation['particle_seed'] = particle_seed
     transaction.commit()
@@ -62,7 +63,7 @@ def ngrun(zodb_URI,sim_id):
         simulation['frames'] = IOBTree.IOBTree()
         transaction.commit()
     frames = simulation['frames']
-    for i,t in np.ndenumerate(np.arange(p.dt,p.max_t,p.dt)):
+    for i,t in np.ndenumerate(np.arange(p.dt,p.max_t+p.dt,p.dt)):
         if 2 * particle_MA.r > p.lx:
             break
         index, = i

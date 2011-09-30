@@ -1,9 +1,11 @@
 {% extends "layout.html" %}
-{% block title %}Browse Simulations{% endblock %}
+{% from "_parameters.html" import render_parameters %}
+{% block title %}Browse a Simulation{% endblock %}
 {% block body %}
-  <h2>Browse Simulations</h2>
+  <h2>Browse a Simulation</h2>
   <h3>Simulation {{ sim_id }}</h3>
   <ul>
+    <li>Current frame: {{ frame_id }}</li>
     <li><a href="{{ url_for('browse_simulation',sim_id=sim_id,frame=0) }}">0</a></li>
     <li><a href="{{ url_for('browse_simulation',sim_id=sim_id,frame=frame_max) }}">{{ frame_max }}</a></li>
   {% if not frame_id == 0 %}
@@ -14,5 +16,6 @@
   {% endif %}
   </ul>
   <img src="{{ url_for('render_simulation_frame',sim_id=sim_id,frame=frame_id) }}" alt="loading..." /> 
+  {{ render_parameters(params) }}
   {% if error %}<div class=error><strong>Error:</strong> {{ error }}</div>{% endif %}
 {% endblock %}

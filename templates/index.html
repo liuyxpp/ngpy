@@ -3,12 +3,18 @@
 {% block body %}
   <h2>New Simulations</h2>
   <ul>
+  {% if not new_simulations %}
+    <div>There are no new simulations. You can <a href="{{ url_for('new_simulation') }}">Create One</a></div>
+  {% endif %}
   {% for simulation in new_simulations %}
     <li><a href="{{ url_for('view_simulation',sim_id=simulation) }}">{{ simulation }}</a></li>
   {% endfor %}
   </ul>
   <h2>Current Active Simulations</h2>
   <ul>
+  {% if not active_simulations %}
+    <div>There are no active simulations. You can <a href="{{ url_for('select_simulation') }}">Choose One to Run It</a></div>
+  {% endif %}
   {% for simulation in active_simulations %}
     <li><a href="{{ url_for('view_simulation',sim_id=simulation) }}">{{ simulation }}</a></li>
   {% endfor %}
