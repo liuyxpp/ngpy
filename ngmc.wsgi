@@ -1,6 +1,6 @@
 import sys
 # Ensure the application can be imported
-sys.path.insert(0,'/export/home/lyx/opt/lyx/ngofflattice')
+# the path is where our app locates
 sys.path.insert(0,'/export/home/lyx/opt/lyx/web')
 
 from ngmc import app as application
