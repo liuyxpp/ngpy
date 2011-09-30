@@ -30,7 +30,8 @@ def connect_zodb(zodb_URI):
     storage_factory,dbkw = resolve_uri(zodb_URI)
     storage = storage_factory()
     db = DB(storage,**dbkw)
-    return db.open()
+    conn = db.open()
+    return conn.root()
 
 
 def setup_simulation(db,params):

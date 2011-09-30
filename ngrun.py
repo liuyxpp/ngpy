@@ -14,6 +14,9 @@
 """
 import math
 import sys
+import uuid
+
+import numpy as np
 
 #from ZODB.POSException import ConflictError
 import transaction
@@ -27,15 +30,21 @@ from ngofflattice_kooi import Param as FileParam
 from ngofflattice_kooi import calc_num_nucleation
 from ngofflattice_kooi import particle_SM_nucleation,particle_SM_growth
 
-#from ngzodb import Particles # a Persistent object of list of particles
-from ngzodb import setup_simulation
+from ngzodb import connect_zodb,setup_simulation
 from ngutil import now2str
-from database import db
+#from database import db
 
-def ngrun(sim_id):
+def ngrun(zodb_URI,sim_id):
+    db = connect_zodb(zodb_URI)
+    sim_uuid = uuid.UUID(sim_id)
     simulations = db['simulations']
-    simulation = simulations[sim_id]
+    simulation = simulations[sim_uuid]
     p = simulation['parameter']
+
+    #UPDATE and ABORT are not handled Currently
+    #Only NEW simulation can be run
+    if not simulation['status'] == 'NEW':
+        return
 
     o_M = Vector2D(p.lx/2,p.ly/2)
     particle_MA = Particle(o_M,p.r_seed,p.r_seed,0,p.k_MA,p.nu_MA)
@@ -43,9 +52,10 @@ def ngrun(sim_id):
     particle_SM_active = []
     particle_SM_inactive = []
     area_untransformed = []
-    dn =0
+    dn = 0
 
     simulation['status'] = 'ACTIVE'
+    simulation['particle_seed'] = particle_seed
     transaction.commit()
 
     if not simulation.has_key('frames'):
@@ -93,15 +103,28 @@ def ngrun(sim_id):
             transaction.commit()
             sys.exit(0)
 
-    simulation['particle_seed'] = particle_seed
     simulation['status'] = 'FINISH'
     simulation['finish_time'] = now2str()
     transaction.commit()
+    return
 
 
 if __name__ == '__main__':
     params = FileParam('ngrc.ini')
-    sim_id = setup_simulation(params)
+    db = connect_zodb(params.database)
+    sim_id = None
+    if not db.has_key('simulations'):
+        sim_id = setup_simulation(params)
+    simulations = db['simulations']
+    if not len(simulations):
+        sim_id = setup_simulation(params)
+    for k in simulations.keys():
+        simulation = simulations[k]
+        if simulation['status'] == 'NEW':
+            sim_id = k
+            break
+    if sim_id is None:
+        sim_id = setup_simulation(params)
 
     ngrun(sim_id)
 
