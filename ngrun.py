@@ -15,6 +15,7 @@
 import math
 import sys
 import uuid
+import copy
 
 import numpy as np
 
@@ -90,7 +91,7 @@ def ngrun(zodb_URI,sim_id):
                            particle_SM_active,particle_SM_inactive)
 
         frame = PersistentMapping({
-            'particle_MA':particle_MA,
+            'particle_MA':copy.deepcopy(particle_MA),
             'particle_SM_active':PersistentList(particle_SM_active),
             'particle_SM_inactive':PersistentList(particle_SM_inactive)
             })
@@ -108,6 +109,17 @@ def ngrun(zodb_URI,sim_id):
     simulation['finish_time'] = now2str()
     transaction.commit()
     return
+
+
+def ngabort(zodb_URI,sim_id):
+    db = connect_zodb(zodb_URI)
+    sim_uuid = uuid.UUID(sim_id)
+    simulations = db['simulations']
+    simulation = simulations[sim_uuid]
+    if simulation['status'] == 'ACTIVE':
+        simulation['status'] = 'ABORT'
+        simulation['abort_time'] = now2str()
+        transaction.commit()
 
 
 if __name__ == '__main__':

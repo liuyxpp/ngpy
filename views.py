@@ -2,15 +2,15 @@ import multiprocessing
 import os
 import signal
 import uuid
+from pickle import dumps
 
 from flask import make_response, render_template
 from flask import request, redirect, url_for
 
-from ngmc import app, jobs
+from ngmc import app, redis
 from database import db
 
 from forms import SelectSimulationForm, NewSimulationForm
-from ngrun import ngrun
 from ngzodb import setup_simulation, update_simulation
 from ngutil import FormParam, now2str
 from ngplot import render_simulation_frame
@@ -185,28 +185,23 @@ def browse_simulation(sim_id):
 
 @app.route("/run/<sim_id>")
 def run_simulation(sim_id):
-    #sim_uuid = uuid.UUID(sim_id)
-    p = multiprocessing.Process(target=ngrun,
-                                args=(app.config['ZODB_STORAGE'],sim_id,))
-    p.start()
-    jobs[sim_id] = p
+    qkey = app.config['REDIS_QUEUE_KEY']
+    key = '%s:%s' % (qkey,sim_id)
+    cmd = 'RUN'
+    zodb = app.config['ZODB_STORAGE']
+    s = dumps((key,cmd,zodb,sim_id))
+    redis.rpush(qkey,s)
     return redirect(url_for('live_simulation',sim_id=sim_id))
 
 
 @app.route("/abort/<sim_id>")
 def abort_simulation(sim_id):
-    simulations = db['simulations']
-    sim_uuid = uuid.UUID(sim_id)
-    simulation = simulations[sim_uuid]
-    if jobs.has_key(sim_id):
-        job = jobs.pop(sim_id)
-        if job.is_alive():
-            #os.kill(job.pid,signal.SIGINT)
-            job.terminate()
-            job.join()
-        if not job.is_alive() and simulation['status'] == 'ACTIVE':
-            simulation['status'] = 'ABORT'
-            simulation['abort_time'] = now2str()
+    qkey = app.config['REDIS_QUEUE_KEY']
+    key = '%s:%s' % (qkey,sim_id)
+    cmd = 'ABORT'
+    zodb = app.config['ZODB_STORAGE']
+    s = dumps((key,cmd,zodb,sim_id))
+    redis.rpush(qkey,s)
     return redirect(url_for('index'))
 
 

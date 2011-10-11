@@ -13,10 +13,14 @@ class Dev(object):
     DEBUG = True
     SECRET_KEY = 'lyx'
     ZODB_STORAGE = 'zconfig:///export/home/lyx/opt/lyx/web/zeo-dev.conf'
+    REDIS_HOST = 'console'
+    REDIS_QUEUE_KEY = 'simQ'
 
 
 class Production(object):
     DEBUG = True
     SECRET_KEY = 'l887y882x0r824x822y'
     ZODB_STORAGE = 'zconfig:///export/home/lyx/opt/lyx/web/zeo.conf'
+    REDIS_HOST = 'console'
+    REDIS_QUEUE_KEY = 'simQ'
 
