@@ -6,11 +6,12 @@ from pickle import dumps
 
 from flask import make_response, render_template
 from flask import request, redirect, url_for
+from flask import jsonify
 
 from ngmc import app, redis
 from database import db
 
-from forms import SelectSimulationForm, NewSimulationForm
+from forms import NewSimulationForm,SelectSimulationForm
 from ngzodb import setup_simulation, update_simulation
 from ngutil import FormParam, now2str
 from ngplot import render_simulation_frame
@@ -20,15 +21,24 @@ def index():
     simulations = db['simulations']
     new_simulations = []
     active_simulations = []
+    finish_simulations = []
+    abort_simulations = []
     for k in simulations.keys():
-        if simulations[k]['status'] == 'NEW':
-            new_simulations.append(str(k))
-        if simulations[k]['status'] == 'ACTIVE':
-            active_simulations.append(str(k))
+        simulation = simulations[k]
+        if simulation['status'] == 'NEW':
+            new_simulations.append((str(k),simulation))
+        if simulation['status'] == 'ACTIVE':
+            active_simulations.append((str(k),simulation))
+        if simulation['status'] == 'FINISH':
+            finish_simulations.append((str(k),simulation))
+        if simulation['status'] == 'ABORT':
+            abort_simulations.append((str(k),simulation))
     return render_template(
         'index.html',
         new_simulations=new_simulations,
         active_simulations=active_simulations,
+        finish_simulations=finish_simulations,
+        abort_simulations=abort_simulations,
     )
 
 
@@ -58,7 +68,7 @@ def simple(sim_id):
 def new_simulation():
     form = NewSimulationForm()
     simulations = db['simulations']
-    if form.validate_on_submit():
+    if request.method == 'POST' and form.validate():
         params = FormParam(form)
         sim_id = setup_simulation(db,params)
         return redirect(url_for('view_simulation',sim_id=sim_id))
@@ -154,21 +164,24 @@ def delete_by_id(sim_id):
     sim_uuid = uuid.UUID(sim_id)
     if simulations.has_key(sim_uuid):
         del simulations[sim_uuid]
-    return redirect("select_simulation")
+    return redirect(url_for('index'))
 
 
 @app.route("/simulations/",methods=['GET','POST'])
 def select_simulation():
-    form = SelectSimulationForm()
     simulations = db['simulations']
-    if request.method == 'POST':
-        sim_id = form.simulations.data
-        return redirect(url_for('view_simulation',sim_id=sim_id))
-    else:
-        form.simulations.choices = [
-            (str(sim_id),str(sim_id)) for sim_id in simulations.keys()
-            ]
-        return render_template('select.html',form=form)
+    new_simulations = []
+    active_simulations = []
+    for k in simulations.keys():
+        if simulations[k]['status'] == 'NEW':
+            new_simulations.append(str(k))
+        if simulations[k]['status'] == 'ACTIVE':
+            active_simulations.append(str(k))
+    return render_template(
+        'select.html',
+        new_simulations=new_simulations,
+        active_simulations=active_simulations,
+    )
 
 
 @app.route("/browse/<sim_id>")
@@ -211,13 +224,27 @@ def live_simulation(sim_id):
     simulation = simulations[uuid.UUID(sim_id)]
     if simulation['status'] != 'ACTIVE' and simulation['status'] != 'NEW':
         return redirect(url_for('browse_simulation',sim_id=sim_id))
+    return render_template('live.html',
+                           sim_id=sim_id,
+                           params=simulation['parameter'])
+
+
+@app.route("/_livefeed")
+def live_feed():
+    sim_id = request.args.get("simid")
+    simulations = db['simulations']
+    simulation = simulations[uuid.UUID(sim_id)]
+
+    if simulation['status'] != 'ACTIVE' and simulation['status'] != 'NEW':
+        return jsonify(redirect=True,
+                       url=url_for('browse_simulation',sim_id=sim_id))
     if not simulation.has_key('frames'):
         frame_id = -1
-        return render_template('live.html',
-                           params=simulation['parameter'],
-                           sim_id=sim_id,frame_id=frame_id)
+        return jsonify(imgsrc="")
+
     frame_id = len(simulation['frames']) - 1
-    return render_template('live.html',
-                           params=simulation['parameter'],
-                           sim_id=sim_id,frame_id=frame_id)
+    return jsonify(imgsrc=url_for("render_simulation_frame",
+                                  sim_id=sim_id,frame=frame_id),
+                   frame=frame_id
+                  )
 

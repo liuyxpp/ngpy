@@ -1,16 +1,37 @@
 {% extends "layout.html" %}
 {% from "_parameters.html" import render_parameters %}
 {% block title %}Live Show a Simulation{% endblock %}
+{% block ajax %}
+<script type=text/javascript>
+    $(function() {
+        var refreshID = setInterval(function(){
+            $.getJSON($SCRIPT_ROOT+'/_livefeed',{
+                    simid:$('#simid').val()
+                }, function(data){
+                    if(data.redirect){
+                        window.location = data.url
+                    }else{
+                        $('#liveimg').attr("src",data.imgsrc);
+                        $('#curframe').text("Current frame: "+data.frame);
+                    }
+                    });
+        }, 4000);
+        $.ajaxSetup( {cache:false} );
+    });
+</script>
+{% endblock %}
 {% block body %}
+  {% if error %}<div class=error><strong>Error:</strong> {{ error }}</div>{% endif %}
   <h2>Live Show a Simulation</h2>
   <h3>Simulation {{ sim_id }}</h3>
-  <div>Current frame: {{ None if frame_id==-1 else frame_id }}</div>
-  <div><a href="{{ url_for('live_simulation',sim_id=sim_id) }}">Refresh.</a></div>
-  <div>You can <a href="{{ url_for('browse_simulation',sim_id=sim_id,frame=frame_id) }}">Browse This Simulation.</a></div>
-  <div>You can <a href="{{ url_for('abort_simulation',sim_id=sim_id) }}">Abort This Simulation.</a></div>
+  <input id=simid type=hidden value={{ sim_id }} />
+  <div id=curframe></div>
+  <div>
+    You can <a href="{{ url_for('browse_simulation',sim_id=sim_id) }}">Browse This Simulation</a> or
+    <a href="{{ url_for('abort_simulation',sim_id=sim_id) }}">Abort This Simulation</a>.
+  </div>
   {% if not frame_id == -1 %}
-  <img src="{{ url_for('render_simulation_frame',sim_id=sim_id,frame=frame_id) }}" alt="loading..." /> 
+  <img id="liveimg" src="" alt="loading..." /> 
   {% endif %}
   {{ render_parameters(params) }}
-  {% if error %}<div class=error><strong>Error:</strong> {{ error }}</div>{% endif %}
 {% endblock %}

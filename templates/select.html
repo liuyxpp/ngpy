@@ -1,9 +1,9 @@
 {% extends "layout.html" %}
 {% from "_formhelpers.html" import render_field %}
-{% block title %}Select a Simulation{% endblock %}
+{% block title %}Simulations{% endblock %}
 {% block body %}
-  <h2>Select a Simulation</h2>
   {% if error %}<div class=error><strong>Error:</strong> {{ error }}</div>{% endif %}
+  <h2>New Simulations</h2>
   <form action="" method="POST">
     <dl>
         {{ render_field(form.simulations) }}

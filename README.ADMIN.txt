@@ -18,6 +18,9 @@
 * Run Redis server
     >redis-server [/path/to/redis.conf]
 
+* Run the simulation task queue daemon
+    >./simd.py
+
 * Run the app using the flask server
     >./ngmc.py
 

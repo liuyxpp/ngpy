@@ -1,0 +1,14 @@
+{% macro render_list(title,simulations,is_new=False) %}
+<h2>{{ title }}</h2>
+  <ul>
+  {% if not simulations %}
+    <div>There are no {{ title }}.</div>
+  {% endif %}
+  {% if not simulations and is_new %}
+    <div>You can <a href="{{ url_for('new_simulation') }}">Create One</a>.</div>
+  {% endif %}
+  {% for (sim_id,simulation) in simulations %}
+  <li><a href="{{ url_for('view_simulation',sim_id=sim_id) }}">{{ sim_id }}</a><div class='time'>{{ simulation['create_time'] }}</div></li>
+  {% endfor %}
+  </ul>
+{% endmacro %}
