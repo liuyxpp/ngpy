@@ -9,6 +9,7 @@ Quickstart
 1. Install
 
 ::
+
     $ easy_install ngpy
 
     * You should install the NoSQL database redis.
@@ -18,6 +19,7 @@ Quickstart
 2. Start ZODB server
 
 ::
+
     $ runzeo -a localhost:<port> -f /path/to/your/data.fs
 
     * <port> should be an available port number, e.g. 1234
@@ -25,31 +27,31 @@ Quickstart
 3. Start redis server
 
 ::
+
     $ redis-server [/path/to/redis.conf]
 
 4. Start the task queue daemon
 
 ::
+
     $ /path/to/simd.py
 
 5. Start ngpy
 
 ::
+
     $ /path/to/run-ngpy.py
 
-The ngpy website should be served at http://localhost:5000.
-You can visit it use any browser (Chrome, Firefox, IE, etc.) via
-::
-    http://localhost:5000
-    If you are a local visitor.
-or
-::
-    http://IP.of.NGPy.run:5000 
-    If you visit remotely.
+    The ngpy website should be served at http://localhost:5000.
+    You can visit it use any browser (Chrome, Firefox, IE, etc.) via
+        http://localhost:5000
+    if you are a local visitor, or
+        http://IP.of.NGPy.run:5000 
+    if you visit remotely.
 
 Links
 `````
 
-* `website <http://liuyxpp.bitbucket.org>`_
-* `development version <http://bitbucket.org/liuyxpp/ngpy/>`_
+* `Website <http://liuyxpp.bitbucket.org>`_
+* `Development version <http://bitbucket.org/liuyxpp/ngpy/>`_
 
