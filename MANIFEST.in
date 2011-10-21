@@ -1,0 +1,12 @@
+include *.txt
+include *.wsgi
+include run-ngpy.py simd.py
+include ngpy/ngrc.ini
+recursive-include tools *
+recursive-include tests *
+recursive-exclude tools *.pyc
+recursive-exclude tools *.pyo
+recursive-exclude tests *.pyc
+recursive-exclude tests *.pyo
+recursive-include ngpy/templates *
+recursive-include ngpy/static *
