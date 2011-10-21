@@ -1,9 +1,14 @@
+import os
 import sys
+
 # Ensure the application can be imported
 # the path is where our app locates
-sys.path.insert(0,'/export/home/lyx/opt/lyx/web')
+sys.path.insert(0,'/export/home/lyx/opt/ngpy/ngpy')
 
-from ngmc import app as application
+# the NGPy configuration file
+os.environ['NGPY_CONFIG'] = '/export/home/lyx/opt/lyx/ngpy/ngpy.cfg'
+
+from ngpy import app as application
 
 # Following is a test code
 # comment out them and comment above lines to test

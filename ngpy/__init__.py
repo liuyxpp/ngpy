@@ -6,7 +6,7 @@ from redis import Redis
 
 app = Flask(__name__)
 app.config.from_object('ngpy.config.Dev')
-app.config.from_envvar('NGPY_SETTINGS',silent=True)
+app.config.from_envvar('NGPY_CONFIG',silent=True)
 
 db = ZODB(app)
 

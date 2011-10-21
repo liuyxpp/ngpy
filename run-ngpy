@@ -1,4 +1,17 @@
 #!/usr/bin/env python
 
+import os
+import argparse
+
 from ngpy import app
-app.run(host='0.0.0.0')
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-c','--config',
+                    default='/export/home/lyx/opt/lyx/ngpy/ngpy.cfg',
+                    help='the location of NGPy configuration file')
+parser.add_argument('-s','--host',default='0.0.0.0',
+                    help='the host your app is served')
+
+args = parser.parse_args()
+os.environ['NGPY_CONFIG'] = args.config
+app.run(host=args.host)

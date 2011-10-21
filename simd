@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+import argparse
+
 from pickle import loads
 from multiprocessing import Process
 
@@ -31,6 +33,13 @@ def queue_daemon(redis,qkey):
 if __name__ == '__main__':
     # In production mode, 
     # the 'console' and 'simQ' should be provided in the command line.
-    redis = Redis('console')
-    queue_daemon(redis,'simQ')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-r','--redis',default='localhost',
+                        help='specify redis host by IP or hostname')
+    parser.add_argument('-q','--qkey',default='simQ',
+                        help='specify qkey which identifies the task message')
+
+    args = parser.parse_args()
+    redis = Redis(args.redis)
+    queue_daemon(redis,args.qkey)
 

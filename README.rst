@@ -6,41 +6,46 @@ NGPy is a web application that enable online performing and analyzing Monte-Carl
 Quickstart
 ``````````
 
-1. Install
+1 Install
 
 ::
 
     $ easy_install ngpy
+    or
+    $ tar -xvf ngpy-xxx.tar.gz
+    $ cd ngpy-xxx
+    $ python setup.py install
 
-    * You should install the NoSQL database redis.
+    * Make sure the NoSQL database redis is installed.
     * Other dependencies like ZODB, WTForm, Numpy, and Matplotlib should be
       taken care by easy_install. If not, try to install them mannually.
 
-2. Start ZODB server
+2 Start ZODB server
 
 ::
 
-    $ runzeo -a localhost:<port> -f /path/to/your/data.fs
+    $ runzeo -a <hostname>:<port> -f /path/to/your/data.fs
 
+    * You can 
     * <port> should be an available port number, e.g. 1234
 
-3. Start redis server
+3 Start redis server
 
 ::
 
     $ redis-server [/path/to/redis.conf]
 
-4. Start the task queue daemon
+4 Start the task queue daemon
 
 ::
 
-    $ /path/to/simd.py
+    $ simd
 
-5. Start ngpy
+5 Start ngpy
 
 ::
 
-    $ /path/to/run-ngpy.py
+    $ run-ngpy
 
     The ngpy website should be served at http://localhost:5000.
     You can visit it use any browser (Chrome, Firefox, IE, etc.) via
