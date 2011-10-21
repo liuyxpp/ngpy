@@ -11,8 +11,8 @@ Quickstart
 ::
     $ easy_install ngpy
 
-* You should install the NoSQL database redis.
-* Other dependencies like ZODB, WTForm, Numpy, and Matplotlib should be
+    * You should install the NoSQL database redis.
+    * Other dependencies like ZODB, WTForm, Numpy, and Matplotlib should be
       taken care by easy_install. If not, try to install them mannually.
 
 2. Start ZODB server
@@ -20,7 +20,7 @@ Quickstart
 ::
     $ runzeo -a localhost:<port> -f /path/to/your/data.fs
 
-* <port> should be an available port number, e.g. 1234
+    * <port> should be an available port number, e.g. 1234
 
 3. Start redis server
 
@@ -39,9 +39,13 @@ Quickstart
 
 The ngpy website should be served at http://localhost:5000.
 You can visit it use any browser (Chrome, Firefox, IE, etc.) via
-    http://localhost:5000 # If you are a local visitor.
+::
+    http://localhost:5000
+    If you are a local visitor.
 or
-    http://your.domain.com:5000 # If you visit remotely.
+::
+    http://IP.of.NGPy.run:5000 
+    If you visit remotely.
 
 Links
 `````
