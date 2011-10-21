@@ -19,21 +19,19 @@ import copy
 
 import numpy as np
 
-#from ZODB.POSException import ConflictError
 import transaction
 from BTrees import IOBTree
 from persistent.list import PersistentList
 from persistent.mapping import PersistentMapping
 
-from particle import Particle
-from vector2d import Vector2D
-from ngofflattice_kooi import Param as FileParam
-from ngofflattice_kooi import calc_num_nucleation
-from ngofflattice_kooi import particle_SM_nucleation,particle_SM_growth
+from .particle import Particle
+from .vector2d import Vector2D
+from .ngofflattice_kooi import Param as FileParam
+from .ngofflattice_kooi import calc_num_nucleation
+from .ngofflattice_kooi import particle_SM_nucleation,particle_SM_growth
 
-from ngzodb import connect_zodb,setup_simulation
-from ngutil import now2str
-#from database import db
+from .ngzodb import connect_zodb,setup_simulation
+from .ngutil import now2str
 
 def ngrun(zodb_URI,sim_id):
     db = connect_zodb(zodb_URI)

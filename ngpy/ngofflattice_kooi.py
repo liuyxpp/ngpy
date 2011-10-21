@@ -36,8 +36,8 @@ import matplotlib.cm as cm
 
 from persistent import Persistent
 
-from particle import Particle
-from vector2d import Vector2D
+from .particle import Particle
+from .vector2d import Vector2D
 
 
 class Param(Persistent):

@@ -1,6 +1,3 @@
-import multiprocessing
-import os
-import signal
 import uuid
 from pickle import dumps
 
@@ -8,13 +5,12 @@ from flask import make_response, render_template
 from flask import request, redirect, url_for
 from flask import jsonify
 
-from ngmc import app, redis
-from database import db
+from ngpy import app, db, redis
 
-from forms import NewSimulationForm,SelectSimulationForm
-from ngzodb import setup_simulation, update_simulation
-from ngutil import FormParam, now2str
-from ngplot import render_simulation_frame
+from .forms import NewSimulationForm,SelectSimulationForm
+from .ngzodb import setup_simulation, update_simulation
+from .ngutil import FormParam, now2str
+from .ngplot import render_simulation_frame
 
 @app.route('/',methods=['GET','POST'])
 def index():

@@ -12,7 +12,9 @@
 class Dev(object):
     DEBUG = True
     SECRET_KEY = 'lyx'
-    ZODB_STORAGE = 'zconfig:///export/home/lyx/opt/lyx/web/zeo-dev.conf'
+    # The explicit hostname should be stated
+    # instead of localhost for multiple nodes usage.
+    ZODB_STORAGE = 'zeo://console:1234'
     REDIS_HOST = 'console'
     REDIS_QUEUE_KEY = 'simQ'
 
@@ -20,7 +22,7 @@ class Dev(object):
 class Production(object):
     DEBUG = True
     SECRET_KEY = 'l887y882x0r824x822y'
-    ZODB_STORAGE = 'zconfig:///export/home/lyx/opt/lyx/web/zeo.conf'
-    REDIS_HOST = 'console'
+    ZODB_STORAGE = 'zeo://c0109:1234'
+    REDIS_HOST = 'c0109'
     REDIS_QUEUE_KEY = 'simQ'
 

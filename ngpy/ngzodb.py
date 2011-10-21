@@ -20,11 +20,11 @@ from persistent import Persistent
 from persistent.mapping import PersistentMapping
 from BTrees import IOBTree,OOBTree
 
-from particle import Particle
-from vector2d import Vector2D
-from ngofflattice_kooi import Param as FileParam
+from .particle import Particle
+from .vector2d import Vector2D
+from .ngofflattice_kooi import Param as FileParam
 
-from ngutil import now2str
+from .ngutil import now2str
 
 def connect_zodb(zodb_URI):
     storage_factory,dbkw = resolve_uri(zodb_URI)

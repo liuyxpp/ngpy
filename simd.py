@@ -3,12 +3,14 @@
 from pickle import loads
 from multiprocessing import Process
 
-from ngrun import ngrun, ngabort
+from redis import Redis
 
-def queue_daemon(app,redis):
+from ngpy.ngrun import ngrun, ngabort
+
+def queue_daemon(redis,qkey):
     jobs = {}
     while 1:
-        msg = redis.blpop(app.config['REDIS_QUEUE_KEY'])
+        msg = redis.blpop(qkey)
         key, cmd, zodb_uri, sim_id = loads(msg[1])
         if cmd == 'RUN':
             if not jobs.has_key(sim_id):
@@ -27,6 +29,8 @@ def queue_daemon(app,redis):
 
 
 if __name__ == '__main__':
-    from ngmc import app,redis
-    queue_daemon(app,redis)
+    # In production mode, 
+    # the 'console' and 'simQ' should be provided in the command line.
+    redis = Redis('console')
+    queue_daemon(redis,'simQ')
 

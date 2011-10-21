@@ -12,8 +12,7 @@ REVISION:
 """
 import numpy as np
 from persistent import Persistent
-#from numpy import reshape
-from vector2d import Vector2D
+from .vector2d import Vector2D
 
 class Particle(Persistent):
     def __init__(self,o=Vector2D(),r0=0.0,r=0.0,t0=0.0,k=1.0,nu=1.0):

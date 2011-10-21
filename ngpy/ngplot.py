@@ -18,8 +18,7 @@ import matplotlib.cm as colormap
 import StringIO
 
 from flask import request, make_response
-from ngmc import app
-from database import db
+from ngpy import app,db
 
 GRAY_M = 63
 GRAY_SEED = 255
@@ -29,7 +28,6 @@ GRAY_ACTIVE_STEP = 2
 
 @app.route("/render/<sim_id>")
 def render_simulation_frame(sim_id):
-    #db = connect_zodb(app.config['ZODB_STORAGE'])
     simulations = db['simulations']
     sim_uuid = uuid.UUID(sim_id)
     if not simulations.has_key(sim_uuid):
