@@ -7,7 +7,7 @@ Quickstart
 ``````````
 
 1. Install
----------
+----------
 
 ::
 
@@ -26,7 +26,7 @@ or
   taken care by easy_install. If not, try to install them mannually.
 
 2. Start ZODB server
--------------------
+--------------------
 
 ::
 
@@ -35,31 +35,31 @@ or
 * <ZEOPORT> must be an available port number, e.g. 1234
 
 3. Start redis server
---------------------
+---------------------
 
 ::
 
     $ redis-server [/path/to/redis.conf]
 
 4. Start the task queue daemon
------------------------------
+------------------------------
 
 ::
 
     $ simd
 
 5. Start ngpy
-------------
+-------------
 
 ::
 
     $ run-ngpy
 
-The ngpy website should be served at http://localhost:5000.
+The ngpy website should be now served at http://localhost:5000.
 You can visit it use any browser (Chrome, Firefox, IE, etc.) via
-    http://localhost:5000
+http://localhost:5000
 if you are a local visitor, or
-    http://IP.of.NGPy.run:5000 
+http://IP.of.NGPy.run:5000 
 if you visit remotely.
 
 Links
