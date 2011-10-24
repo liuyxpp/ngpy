@@ -1,0 +1,25 @@
+# The sample configuration for register the flask app [ngpy] in Apache.
+# Append this configuration to the file http.conf or any configuration
+# for Apache.
+# You may modify the server name and server domain.
+# You should modify the app name and location accordingly.
+# The python package structure of the flask app is assumed.
+# And the wsgi file should be placed next to the app dir.
+# The sample wsgi file can be find in ngpy.wsgi.
+
+<VirtualHost *>
+    ServerAdmin liuyxpp@gmail.com
+    ServerName lyx.com
+
+    WSGIDaemonProcess ngpy user=lyx group=lyx threads=5
+    WSGIScriptAlias /ngpy /export/home/lyx/opt/lyx/ngpy/ngpy.wsgi
+    
+    <Directory "/export/home/lyx/opt/lyx/ngpy">
+        WSGIProcessGroup ngpy
+        WSGIApplicationGroup %{GLOBAL}
+        WSGIPassAuthorization On
+        WSGIScriptReloading On
+        Order allow,deny 
+        Allow from all 
+    </Directory>
+</VirtualHost>
