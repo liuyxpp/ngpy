@@ -1,5 +1,7 @@
 include README.rst
 include ADMIN.txt
+include LICENSE.txt
+include CHANGELOG.txt
 include ngpy.cfg
 include ngpy.wsgi
 include httpd.conf.sample

@@ -1,0 +1,10 @@
+NGPy Changelog
+===============
+
+Here you can see the full list of changes between each NGPy release.
+
+Version 0.1
+-----------
+
+Released at Oct. 24, 2011.
+First public preview release.
