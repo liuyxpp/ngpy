@@ -62,6 +62,12 @@ if you are a local visitor, or
 http://IP.of.NGPy.run:5000 
 if you visit remotely.
 
+Ask for Help
+````````````
+
+* You can directly contact me at liuyxpp@gmail.com.
+* You can join the mailinglist by sending an email to ngpy@librelist.com and replying to the confirmation mail. To unsubscribe, send a mail to ngpy-unsubscribe@librelist.com and reply to the confirmation mail.
+
 Links
 `````
 
