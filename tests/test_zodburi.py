@@ -13,3 +13,7 @@ dbroot = conn.root()
 
 print dbroot.keys()
 
+groups = dbroot['sim_groups']
+print groups
+choices = [(group,group) for group in groups.keys()]
+print choices

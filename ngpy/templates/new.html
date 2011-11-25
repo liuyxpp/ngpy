@@ -13,7 +13,26 @@
         }
     });
     $(function() {
-        $('#lx').keyup(function(){
+        $('#mode').change(function(){
+            if(this.checked){
+                $('#batch').attr('style','display:block');
+                var min = $('#'+$('#batchvar').val()).val();
+                $('#batchmin').val(min);
+            }else{
+                $('#batch').attr('style','display:none');
+            }
+        }).trigger('change') // Trigger the event when load or reload
+        $('#batchvar').change(function(){
+            var min = $('#'+$(this).val()).val();
+            $('#batchmin').val(min);
+        })
+        $('#param input:text').bind('keyup change',function(){
+            if($('#mode:checked').length){
+                var min = $('#'+$('#batchvar').val()).val();
+                $('#batchmin').val(min);
+            }
+        })
+        $('#lx').bind('keyup change',function(){
             $('#ly').val($(this).val());
             var lx = $(this).val();
             var Lx = $('#Lx').val();
@@ -25,19 +44,7 @@
             $('#dy').val(dy)
             $('#r0_SM').val(dx/2.0)
         });
-        $('#lx').blur(function(){
-            $('#ly').val($(this).val());
-            var lx = $(this).val();
-            var Lx = $('#Lx').val();
-            var ly = $('#ly').val();
-            var Ly = $('#Ly').val();
-            var dx = lx/Lx
-            var dy = ly/Ly
-            $('#dx').val(dx)
-            $('#dy').val(dy)
-            $('#r0_SM').val(dx/2.0)
-        });
-        $('#Lx').keyup(function(){
+        $('#Lx').bind('keyup change',function(){
             $('#Ly').val($(this).val());
             var lx = $('#lx').val();
             var Lx = $(this).val();
@@ -49,23 +56,7 @@
             $('#dy').val(dy)
             $('#r0_SM').val(dx/2.0)
         });
-        $('#Lx').blur(function(){
-            $('#Ly').val($(this).val());
-            var lx = $('#lx').val();
-            var Lx = $(this).val();
-            var ly = $('#ly').val();
-            var Ly = $('#Ly').val();
-            var dx = lx/Lx
-            var dy = ly/Ly
-            $('#dx').val(dx)
-            $('#dy').val(dy)
-            $('#r0_SM').val(dx/2.0)
-        });
-        $('#dt').keyup(function(){
-            var dt = $(this).val();
-            $('#Nx').val(1.0/dt);
-        });
-        $('#dt').blur(function(){
+        $('#dt').bind('keyup change',function(){
             var dt = $(this).val();
             $('#Nx').val(1.0/dt);
         });
@@ -78,6 +69,16 @@
   <form action="" method="POST">
     <dl>
         {{ form.csrf() }}
+        {{ render_field(form.mode) }}
+        <fieldset id='batch' style='display:none'>
+        {{ render_field(form.batchvar) }}
+        {{ render_field(form.batchmin,readonly='readonly') }}
+        {{ render_field(form.batchstep) }}
+        {{ render_field(form.batchmax) }}
+        </fieldset>
+        {{ render_field(form.name) }}
+        {{ render_field(form.group) }}
+        <fieldset id='param'>
         {{ render_field(form.lx) }}
         {{ render_field(form.ly,readonly='readonly') }}
         {{ render_field(form.Lx) }}
@@ -95,6 +96,7 @@
         {{ render_field(form.n_SM) }}
         {{ render_field(form.r_seed) }}
         {{ render_field(form.r_test) }}
+        </fieldset>
     </dl>
     <div class=actions><input type=submit value="Create"></div>
   </form>

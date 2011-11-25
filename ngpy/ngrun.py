@@ -41,8 +41,8 @@ def ngrun(zodb_URI,sim_id):
     p = simulation['parameter']
 
     #UPDATE and ABORT are not handled Currently
-    #Only NEW simulation can be run
-    if not simulation['status'] == 'NEW':
+    #Only NEW and UPDATE simulation can be run
+    if simulation['status'] not in ('NEW','UPDATE'):
         return
 
     o_M = Vector2D(p.lx/2,p.ly/2)

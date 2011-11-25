@@ -5,29 +5,37 @@
   <h2>Information for Simulation</h2>
   <h3>Summary</h3>
     <div>ID: {{ sim_id }}</div>
+    <div>Name: {{ name }}</div>
+    <div>Group: {{ group }}</div>
     <div>Status: {{ status }}</div>
     <div>create_time: {{ create_time }}</div>
     <div>update_time: {{ update_time }}</div>
     <div>run_time: {{ run_time }}</div>
     <div>abort_time: {{ abort_time }}</div>
     <div>finish_time: {{ finish_time }}</div>
+
   <h3>Manage this simulation</h3>
+  {% if status in ('NEW','UPDATE') %}
+    <div><a href="{{ url_for('run_simulation',sim_id=sim_id) }}">Run</a></div>
+  {% endif %}
   {% if not status == 'ACTIVE' %}
-    {% if not status == 'NEW' %}
+    {% if status not in ('New','UPDATE') %}
     <div><a href="{{ url_for('browse_simulation',sim_id=sim_id) }}">Browse Results</a></div>
     {% endif %}
     <div><a href="{{ url_for('edit_simulation',sim_id=sim_id) }}">Edit</a></div>
     <div><a href="{{ url_for('delete_by_id',sim_id=sim_id) }}">Delete</a></div>
   {% endif %}
-  {% if status == 'NEW' %}
-    <div><a href="{{ url_for('run_simulation',sim_id=sim_id) }}">Run</a></div>
-  {% endif %}
   {% if status == 'ACTIVE' %}
     <div><a href="{{ url_for('abort_simulation',sim_id=sim_id) }}">Abort</a></div>
     <div><a href="{{ url_for('live_simulation',sim_id=sim_id) }}">View Live Results</a></div>
   {% endif %}
+    <div><a href="{{ url_for('new_simulation',sim_id=sim_id) }}">Create simulations based on this one</a></div>
+
   <h3>Results</h3>
     <div>Number of frames: {{ num_frames }}</div>
+
   {{ render_parameters(params) }}
+
   {% if error %}<div class=error><strong>Error:</strong> {{ error }}</div>{% endif %}
 {% endblock %}
+

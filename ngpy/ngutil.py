@@ -22,27 +22,43 @@ class FormParam(Persistent):
     def __init__(self,form):
         self.lx = form.lx.data
         self.Lx = form.Lx.data
-        self.ly = form.ly.data
-        self.Ly = form.Ly.data
-        #self.ly = self.lx
-        #self.Ly = self.Lx
-        self.dx = form.dx.data
-        self.dy = form.dy.data
-        #self.dx = self.lx/self.Lx
-        #self.dy = self.dx
+        #self.ly = form.ly.data
+        #self.Ly = form.Ly.data
+        self.ly = self.lx
+        self.Ly = self.Lx
+        #self.dx = form.dx.data
+        #self.dy = form.dy.data
+        self.dx = self.lx/self.Lx
+        self.dy = self.dx
         self.dt = form.dt.data
-        self.Nx = form.Nx.data
-        #self.Nx = int(round(1/self.dt))
+        #self.Nx = form.Nx.data
+        self.Nx = int(round(1/self.dt))
         self.max_t = form.max_t.data
         self.k_MA = form.k_MA.data
         self.nu_MA = form.nu_MA.data
-        self.r0_SM = form.r0_SM.data
-        #self.r0_SM = self.dx/2.0
+        #self.r0_SM = form.r0_SM.data
+        self.r0_SM = self.dx/2.0
         self.k_SM = form.k_SM.data
         self.nu_SM = form.nu_SM.data
         self.n_SM = form.n_SM.data
         self.r_seed = form.r_seed.data
         self.r_test = form.r_test.data
+    def setval(self,attr,val):
+        setattr(self,attr,val)
+        # do extra relations
+        if attr == 'lx':
+            self.ly = self.lx
+            self.dx = self.lx/self.Lx
+            self.dy = self.dx
+            self.r0_SM = self.dx/2.0
+        if attr == 'Lx':
+            self.Ly = self.Lx
+            self.dx = self.lx/self.Lx
+            self.dy = self.dx
+            self.r0_SM = self.dx/2.0
+        if attr == 'dt':
+            self.Nx = int(round(1/self.dt))
+
 
 def str2time(iso_datetime_str):
     return datetime.datetime.strptime(iso_datetime_str,ISO_TIME_FORMAT)
@@ -59,6 +75,7 @@ def test():
     print now
     nowstr = time2str(now)
     print nowstr
+
 
 if __name__ == '__main__':
     test()

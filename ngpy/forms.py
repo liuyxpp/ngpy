@@ -11,14 +11,28 @@
 """
 
 import uuid
-from flaskext.wtf import Form,Required,Optional,NumberRange
-from flaskext.wtf import IntegerField,FloatField,SelectField
+from flaskext.wtf import Form,Required,Optional,NumberRange,Length
+from flaskext.wtf import IntegerField,FloatField
+from flaskext.wtf import SelectField,TextField,BooleanField
 
 class SelectSimulationForm(Form):
     simulations = SelectField(u'Simulations') #,coerce=uuid.UUID)
 
 
 class NewSimulationForm(Form):
+    mode = BooleanField(u'Bactch mode')
+    batchvar = SelectField(u'Batch variable',
+                          choices=[('lx','lx'),('Lx','Lx'),('dt','dt'),
+                                   ('max_t','max_t'),('k_MA','k_MA'),
+                                   ('nu_MA','nu_MA'),('k_SM','k_SM'),
+                                   ('nu_SM','nu_SM'),('n_SM','n_SM'),
+                                   ('r_seed','r_seed'),('r_test','r_test')
+                                  ])
+    batchmin = FloatField(u'Batch min')
+    batchstep = FloatField(u'Batch step')
+    batchmax = FloatField(u'Batch max')
+    name = TextField(u'Name',[Length(max=128)])
+    group = SelectField(u'Group')
     lx = FloatField(u'lx',[Required(),NumberRange(1e3,1e6)])
     ly = FloatField(u'ly',[Required()])
     Lx = IntegerField(u'Lx',[Required(),NumberRange(1e2,1e4)])

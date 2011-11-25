@@ -1,0 +1,7 @@
+{% extends "layout.html" %}
+{% block title %}Page Not Found{% endblock %}
+{% block body %}
+  <h2>Page Not Found</h2>
+  <p>We are unable to find the page you required.</p>
+  <p>You may goto the <a href="{{ url_for('index') }}">Homepage</a></p>
+{% endblock %}

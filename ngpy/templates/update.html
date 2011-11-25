@@ -1,14 +1,102 @@
 {% extends "layout.html" %}
 {% from "_formhelpers.html" import render_field %}
 {% block title %}Update a Simulation{% endblock %}
+{% block ajax %}
+<script type=text/javascript>
+    $.ajaxSetup({
+        beforeSend: function(xhr,settings){
+            if(!(/^http:.*/.test(settings.url) || /^http:.*/.test(settings.url))){
+            // Only send the token to relative URLs i.e. locally.
+            xhr.setRequestHeader("X-CSRFToken",
+                                 $("#csrfmiddlewaretoken").val());
+            }
+        }
+    });
+    $(function() {
+        $('#lx').keyup(function(){
+            $('#ly').val($(this).val());
+            var lx = $(this).val();
+            var Lx = $('#Lx').val();
+            var ly = $('#ly').val();
+            var Ly = $('#Ly').val();
+            var dx = lx/Lx
+            var dy = ly/Ly
+            $('#dx').val(dx)
+            $('#dy').val(dy)
+            $('#r0_SM').val(dx/2.0)
+        });
+        $('#lx').blur(function(){
+            $('#ly').val($(this).val());
+            var lx = $(this).val();
+            var Lx = $('#Lx').val();
+            var ly = $('#ly').val();
+            var Ly = $('#Ly').val();
+            var dx = lx/Lx
+            var dy = ly/Ly
+            $('#dx').val(dx)
+            $('#dy').val(dy)
+            $('#r0_SM').val(dx/2.0)
+        });
+        $('#Lx').keyup(function(){
+            $('#Ly').val($(this).val());
+            var lx = $('#lx').val();
+            var Lx = $(this).val();
+            var ly = $('#ly').val();
+            var Ly = $('#Ly').val();
+            var dx = lx/Lx
+            var dy = ly/Ly
+            $('#dx').val(dx)
+            $('#dy').val(dy)
+            $('#r0_SM').val(dx/2.0)
+        });
+        $('#Lx').blur(function(){
+            $('#Ly').val($(this).val());
+            var lx = $('#lx').val();
+            var Lx = $(this).val();
+            var ly = $('#ly').val();
+            var Ly = $('#Ly').val();
+            var dx = lx/Lx
+            var dy = ly/Ly
+            $('#dx').val(dx)
+            $('#dy').val(dy)
+            $('#r0_SM').val(dx/2.0)
+        });
+        $('#dt').keyup(function(){
+            var dt = $(this).val();
+            $('#Nx').val(1.0/dt);
+        });
+        $('#dt').blur(function(){
+            var dt = $(this).val();
+            $('#Nx').val(1.0/dt);
+        });
+    });
+</script>
+{% endblock %}
 {% block body %}
   <h2>Update a Simulation</h2>
-  {% if error %}<div class=error><strong>Error:</strong> {{ error }}</div>{% endif %}
+  {% if form.errors %}<div class=error><strong>Error:</strong> {{ form.errors }}</div>{% endif %}
   <form action="" method="POST">
     <dl>
-    {% for field in form %}
-        {{ render_field(field) }}
-    {% endfor %}
+        {{ form.csrf() }}
+        {{ render_field(form.name) }}
+        {{ render_field(form.group) }}
+        {{ render_field(form.lx) }}
+        {{ render_field(form.ly,readonly='readonly') }}
+        {{ render_field(form.Lx) }}
+        {{ render_field(form.Ly,readonly='readonly') }}
+        {{ render_field(form.dx,readonly='readonly') }}
+        {{ render_field(form.dy,readonly='readonly') }}
+        {{ render_field(form.dt) }}
+        {{ render_field(form.Nx,readonly='readonly') }}
+        {{ render_field(form.max_t) }}
+        {{ render_field(form.k_MA) }}
+        {{ render_field(form.nu_MA) }}
+        {{ render_field(form.r0_SM,readonly='readonly') }}
+        {{ render_field(form.k_SM) }}
+        {{ render_field(form.nu_SM) }}
+        {{ render_field(form.n_SM) }}
+        {{ render_field(form.r_seed) }}
+        {{ render_field(form.r_test) }}
     </dl>
     <div class=actions><input type=submit value="Update"></div>
   </form>

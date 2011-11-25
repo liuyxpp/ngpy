@@ -6,9 +6,10 @@ from flask import request, redirect, url_for
 from flask import jsonify
 
 from ngpy import app, db, redis
+import numpy as np
 
-from .forms import NewSimulationForm,SelectSimulationForm
-from .ngzodb import setup_simulation, update_simulation
+from .forms import NewSimulationForm, SelectSimulationForm
+from .ngzodb import setup_simulation, update_simulation, del_simulation
 from .ngutil import FormParam, now2str
 from .ngplot import render_simulation_frame
 
@@ -21,7 +22,7 @@ def index():
     abort_simulations = []
     for k in simulations.keys():
         simulation = simulations[k]
-        if simulation['status'] == 'NEW':
+        if simulation['status'] in ('NEW','UPDATE'):
             new_simulations.append((str(k),simulation))
         if simulation['status'] == 'ACTIVE':
             active_simulations.append((str(k),simulation))
@@ -37,6 +38,9 @@ def index():
         abort_simulations=abort_simulations,
     )
 
+@app.route('/error/',methods=['GET','POST'])
+def error(message):
+    return render_template('error.htm',message=message)
 
 @app.route("/simple/<sim_id>")
 def simple(sim_id):
@@ -61,14 +65,40 @@ def simple(sim_id):
 
 
 @app.route("/create/",methods=['Get','POST'])
-def new_simulation():
-    form = NewSimulationForm()
+@app.route("/create/<sim_id>",methods=['Get','POST'])
+def new_simulation(sim_id=None):
     simulations = db['simulations']
+    # copy params from sim_id
+    sim_uuid = 0
+    if sim_id is not None:
+        sim_uuid = uuid.UUID(sim_id)
+    params = None
+    if simulations.has_key(sim_uuid):
+        simulation = simulations[sim_uuid]
+        params = simulation['parameter']
+    form = NewSimulationForm(request.form,params)
+    groups = db['sim_groups']
+    form.group.choices = [(group,group) for group in groups.keys()]
     if request.method == 'POST' and form.validate():
         params = FormParam(form)
-        sim_id = setup_simulation(db,params)
+        owner = 'lyx' # which should be modified after introduction of
+                     # authentication
+        name = form.name.data
+        group = form.group.data
+        if form.mode.data:
+            # batch_var is in
+            # (lx,Lx,dt,max_t,k_MA,nu_MA,k_SM,nu_SM,n_SM,r_seed,r_seed)
+            batch_var = form.batchvar.data
+            batch_step = form.batchstep.data
+            batch_max = form.batchmax.data + batch_step
+            batch_min = form.batchmin.data
+            for val in np.arange(batch_min,batch_max,batch_step):
+                params.setval(batch_var,val)
+                sim_id = setup_simulation(db,params,name,owner,group)
         return redirect(url_for('view_simulation',sim_id=sim_id))
     else:
+        if params is not None:
+            form.group.data = simulation['group']
         return render_template('new.html',form=form)
 
 @app.route('/view/<sim_id>',methods=['GET','POST'])
@@ -81,21 +111,15 @@ def view_simulation(sim_id):
     num_frames = 0
     if simulation.has_key('frames'):
         num_frames = len(simulation['frames'])
-    update_time = None
-    if simulation.has_key('update_time'):
-        update_time = simulation['update_time']
-    run_time = None
-    if simulation.has_key('run_time'):
-        run_time = simulation['run_time']
-    abort_time = None
-    if simulation.has_key('abort_time'):
-        abort_time = simulation['abort_time']
-    finish_time = None
-    if simulation.has_key('finish_time'):
-        finish_time = simulation['finish_time']
+    update_time = simulation['update_time']
+    run_time = simulation['run_time']
+    abort_time = simulation['abort_time']
+    finish_time = simulation['finish_time']
     return render_template(
         'view.html',
         sim_id=sim_id,
+        name=simulation['name'],
+        group=simulation['group'],
         params=simulation['parameter'],
         status=simulation['status'],
         create_time=simulation['create_time'],
@@ -109,15 +133,14 @@ def view_simulation(sim_id):
 
 @app.route("/edit/",methods=['GET','POST'])
 def issue_edit():
-    form = SelectSimulationForm()
     simulations = db['simulations']
-    if request.method == 'POST':
+    form = SelectSimulationForm(request.form)
+    form.simulations.choices = [
+        (str(sim_id),str(sim_id)) for sim_id in simulations.keys()]
+    if request.method == 'POST': #form.validate_on_submit():
         sim_id = form.simulations.data
         return redirect(url_for('edit_simulation',sim_id=sim_id))
     else:
-        form.simulations.choices = [
-            (str(sim_id),str(sim_id)) for sim_id in simulations.keys()
-            ]
         return render_template('edit.html',form=form)
 
 
@@ -125,42 +148,43 @@ def issue_edit():
 def edit_simulation(sim_id):
     simulations = db['simulations']
     sim_uuid = uuid.UUID(sim_id)
-    params = None
-    if simulations.has_key(sim_uuid):
-        simulation = simulations[sim_uuid]
-        params = simulation['parameter']
+    if not simulations.has_key(sim_uuid):
+        return redirect(url_for('index'))
+    simulation = simulations[sim_uuid]
+    if simulation['status'] not in ('NEW','UPDATE'):
+        return redirect(url_for('index'))
+    params = simulation['parameter']
     form = NewSimulationForm(request.form,params)
+    groups = db['sim_groups']
+    form.group.choices = [(group,group) for group in groups.keys()]
     if form.validate_on_submit():
         p = FormParam(form)
-        update_simulation(db,sim_uuid,p)
+        update_simulation(db,sim_id,p,form.name.data,form.group.data)
         return redirect(url_for('view_simulation',sim_id=sim_id))
     else:
+        form.name.data = simulation['name']
+        form.group.data = simulation['group']
         return render_template('update.html',form=form)
 
 
 @app.route("/delete/",methods=['GET','POST'])
 def delete_simulation():
-    form = SelectSimulationForm()
     simulations = db['simulations']
+    form = SelectSimulationForm(request.form)
+    form.simulations.choices = [
+        (str(sim_id),str(sim_id)) for sim_id in simulations.keys()
+        ]
     if request.method == 'POST':
-        sim_id = uuid.UUID(form.simulations.data)
-        if simulations.has_key(sim_id):
-            del simulations[sim_id]
+        del_simulation(db,form.simulations.data)
         return redirect(url_for('delete_simulation'))
     else:
-        form.simulations.choices = [
-            (str(sim_id),str(sim_id)) for sim_id in simulations.keys()
-            ]
         return render_template('delete.html',form=form)
 
 
 @app.route("/delete/<sim_id>")
 def delete_by_id(sim_id):
-    simulations = db['simulations']
-    sim_uuid = uuid.UUID(sim_id)
-    if simulations.has_key(sim_uuid):
-        del simulations[sim_uuid]
-    return redirect(url_for('index'))
+    del_simulation(db,sim_id)
+    return redirect(url_for('delete_simulation'))
 
 
 @app.route("/simulations/",methods=['GET','POST'])
@@ -184,8 +208,12 @@ def select_simulation():
 def browse_simulation(sim_id):
     simulations = db['simulations']
     simulation = simulations[uuid.UUID(sim_id)]
-    frame_id = eval(request.args.get('frame','0'))
+    if not simulation.has_key('frames'):
+        abort(404)
     frame_max = len(simulation['frames']) - 1
+    if frame_max < 0:
+        abort(404)
+    frame_id = eval(request.args.get('frame','0'))
     return render_template('browse.html',
                            params=simulation['parameter'],
                            sim_id=sim_id,frame_id=frame_id,
@@ -218,7 +246,7 @@ def abort_simulation(sim_id):
 def live_simulation(sim_id):
     simulations = db['simulations']
     simulation = simulations[uuid.UUID(sim_id)]
-    if simulation['status'] != 'ACTIVE' and simulation['status'] != 'NEW':
+    if simulation['status'] != 'ACTIVE':
         return redirect(url_for('browse_simulation',sim_id=sim_id))
     return render_template('live.html',
                            sim_id=sim_id,
@@ -231,7 +259,7 @@ def live_feed():
     simulations = db['simulations']
     simulation = simulations[uuid.UUID(sim_id)]
 
-    if simulation['status'] != 'ACTIVE' and simulation['status'] != 'NEW':
+    if simulation['status'] != 'ACTIVE':
         return jsonify(redirect=True,
                        url=url_for('browse_simulation',sim_id=sim_id))
     if not simulation.has_key('frames'):
