@@ -1,0 +1,9 @@
+{% extends "layout.html" %}
+{% block title %}Page Not Found{% endblock %}
+{% block body %}
+  <h2>An Error Has Occured</h2>
+  <div id='err_msg'>
+    <p>{{ message }}</p>
+  </div>
+  <p>You may goto the <a href="{{ url_for('index') }}">Homepage</a></p>
+{% endblock %}

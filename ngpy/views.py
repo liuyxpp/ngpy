@@ -3,13 +3,16 @@ from pickle import dumps
 
 from flask import make_response, render_template
 from flask import request, redirect, url_for
-from flask import jsonify
+from flask import jsonify, abort
 
 from ngpy import app, db, redis
 import numpy as np
 
 from .forms import NewSimulationForm, SelectSimulationForm
+from .forms import SearchSimulationForm
 from .ngzodb import setup_simulation, update_simulation, del_simulation
+from .ngzodb import find_simulations
+from .ngzodb import execute_simulation,cancel_simulation
 from .ngutil import FormParam, now2str
 from .ngplot import render_simulation_frame
 
@@ -39,8 +42,8 @@ def index():
     )
 
 @app.route('/error/',methods=['GET','POST'])
-def error(message):
-    return render_template('error.htm',message=message)
+def error():
+    return render_template('error.html',message=request.args.get('message'))
 
 @app.route("/simple/<sim_id>")
 def simple(sim_id):
@@ -207,7 +210,10 @@ def select_simulation():
 @app.route("/browse/<sim_id>")
 def browse_simulation(sim_id):
     simulations = db['simulations']
-    simulation = simulations[uuid.UUID(sim_id)]
+    sim_uuid = uuid.UUID(sim_id)
+    if not simulations.has_key(sim_uuid):
+        abort(404)
+    simulation = simulations[sim_uuid]
     if not simulation.has_key('frames'):
         abort(404)
     frame_max = len(simulation['frames']) - 1
@@ -222,24 +228,66 @@ def browse_simulation(sim_id):
 
 @app.route("/run/<sim_id>")
 def run_simulation(sim_id):
-    qkey = app.config['REDIS_QUEUE_KEY']
-    key = '%s:%s' % (qkey,sim_id)
-    cmd = 'RUN'
-    zodb = app.config['ZODB_STORAGE']
-    s = dumps((key,cmd,zodb,sim_id))
-    redis.rpush(qkey,s)
+    simulations = db['simulations']
+    sim_uuid = uuid.UUID(sim_id)
+    if not simulations.has_key(sim_uuid):
+        abort(404)
+    simulation = simulations[sim_uuid]
+    if simulation['status'] not in ('NEW','UPDATE'):
+        abort(404)
+    execute_simulation(redis,sim_id)
     return redirect(url_for('live_simulation',sim_id=sim_id))
+
+
+@app.route("/batchrun",methods=['GET','POST'])
+def batch_run_simulation():
+    simulations = db['simulations']
+    last_run = None
+    if request.method == 'POST':
+        for sim_id in request.form.keys():
+            sim_uuid = uuid.UUID(sim_id)
+            if not simulations.has_key(sim_uuid):
+                continue
+            simulation = simulations[sim_uuid]
+            if simulation['status'] in ('NEW','UPDATE'):
+                execute_simulation(redis,sim_id)
+                last_run = sim_id
+        if last_run is None:
+            return redirect(url_for('error',message='No simulation executed in batch_run_simulation'))
+        else:
+            return redirect(url_for('live_simulation',sim_id=last_run))
+    else:
+        return redirect(url_for('error',
+                                message='Only POST method is supported in batch_run_simulation'))
 
 
 @app.route("/abort/<sim_id>")
 def abort_simulation(sim_id):
-    qkey = app.config['REDIS_QUEUE_KEY']
-    key = '%s:%s' % (qkey,sim_id)
-    cmd = 'ABORT'
-    zodb = app.config['ZODB_STORAGE']
-    s = dumps((key,cmd,zodb,sim_id))
-    redis.rpush(qkey,s)
-    return redirect(url_for('index'))
+    cancel_simulation(redis,sim_id)
+    return redirect(url_for('view_simulation',sim_id=sim_id))
+
+
+@app.route("/batchabort",methods=['POST'])
+def batch_abort_simulation():
+    simulations = db['simulations']
+    last_abort = None
+    if request.method == 'POST':
+        for sim_id in request.form.keys():
+            sim_uuid = uuid.UUID(sim_id)
+            if not simulations.has_key(sim_uuid):
+                continue
+            simulation = simulations[sim_uuid]
+            if simulation['status'] == 'ACTIVE':
+                cancel_simulation(redis,sim_id)
+                last_abort = sim_id
+        if last_abort is None:
+            return redirect(url_for('error',
+                                    message='No simulation executed in batch_abort_simulation'))
+        else:
+            return redirect(url_for('view_simulation',sim_id=last_abort))
+    else:
+        return redirect(url_for('error',
+                                message='Only POST method is supported in batch_abort_simulation'))
 
 
 @app.route("/live/<sim_id>")
@@ -271,4 +319,21 @@ def live_feed():
                                   sim_id=sim_id,frame=frame_id),
                    frame=frame_id
                   )
+
+
+@app.route("/search",methods=['GET','POST'])
+def search_simulation():
+    form = SearchSimulationForm(request.form)
+    groups = db['sim_groups']
+    form.group.choices = [(group,group) for group in groups.keys()]
+    form.group.choices.append(('all','All'))
+    if request.method == 'POST': #and form.validate():
+        results = find_simulations(db,form)
+        return render_template('search_result.html',simulations = results)
+    else:
+        form.group.data = 'all'
+        form.status.data = 'all'
+        return render_template('search.html',form=form)
+
+
 

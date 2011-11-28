@@ -8,7 +8,10 @@
     <div>You can <a href="{{ url_for('new_simulation') }}">Create One</a>.</div>
   {% endif %}
   {% for (sim_id,simulation) in simulations %}
-  <li><a href="{{ url_for('view_simulation',sim_id=sim_id) }}">{{ sim_id }}</a><div class='time'>{{ simulation['create_time'] }}</div></li>
+  <li>
+  <a href="{{ url_for('view_simulation',sim_id=sim_id) }}">{{ sim_id }}</a>({{ simulation['status'] }})
+    <div class='time'>{{ simulation['create_time'] }}</div>
+  </li>
   {% endfor %}
   </ul>
 {% endmacro %}

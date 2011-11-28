@@ -13,7 +13,7 @@
         }
     });
     $(function() {
-        $('#lx').keyup(function(){
+        $('#lx').bind('keyup change',function(){
             $('#ly').val($(this).val());
             var lx = $(this).val();
             var Lx = $('#Lx').val();
@@ -25,19 +25,7 @@
             $('#dy').val(dy)
             $('#r0_SM').val(dx/2.0)
         });
-        $('#lx').blur(function(){
-            $('#ly').val($(this).val());
-            var lx = $(this).val();
-            var Lx = $('#Lx').val();
-            var ly = $('#ly').val();
-            var Ly = $('#Ly').val();
-            var dx = lx/Lx
-            var dy = ly/Ly
-            $('#dx').val(dx)
-            $('#dy').val(dy)
-            $('#r0_SM').val(dx/2.0)
-        });
-        $('#Lx').keyup(function(){
+        $('#Lx').bind('keyup change',function(){
             $('#Ly').val($(this).val());
             var lx = $('#lx').val();
             var Lx = $(this).val();
@@ -49,32 +37,14 @@
             $('#dy').val(dy)
             $('#r0_SM').val(dx/2.0)
         });
-        $('#Lx').blur(function(){
-            $('#Ly').val($(this).val());
-            var lx = $('#lx').val();
-            var Lx = $(this).val();
-            var ly = $('#ly').val();
-            var Ly = $('#Ly').val();
-            var dx = lx/Lx
-            var dy = ly/Ly
-            $('#dx').val(dx)
-            $('#dy').val(dy)
-            $('#r0_SM').val(dx/2.0)
-        });
-        $('#dt').keyup(function(){
+        $('#dt').bind('keyup change',function(){
             var dt = $(this).val();
             $('#Nx').val(1.0/dt);
-        });
-        $('#dt').blur(function(){
-            var dt = $(this).val();
-            $('#Nx').val(1.0/dt);
-        });
     });
 </script>
 {% endblock %}
 {% block body %}
   <h2>Update a Simulation</h2>
-  {% if form.errors %}<div class=error><strong>Error:</strong> {{ form.errors }}</div>{% endif %}
   <form action="" method="POST">
     <dl>
         {{ form.csrf() }}

@@ -11,9 +11,14 @@
 """
 
 import uuid
+import datetime
+
 from flaskext.wtf import Form,Required,Optional,NumberRange,Length
 from flaskext.wtf import IntegerField,FloatField
 from flaskext.wtf import SelectField,TextField,BooleanField
+from flaskext.wtf import DateTimeField
+
+from .ngzodb import CHANGEABLE_SIM_PARAM, SIMULATION_STATUS
 
 class SelectSimulationForm(Form):
     simulations = SelectField(u'Simulations') #,coerce=uuid.UUID)
@@ -21,13 +26,7 @@ class SelectSimulationForm(Form):
 
 class NewSimulationForm(Form):
     mode = BooleanField(u'Bactch mode')
-    batchvar = SelectField(u'Batch variable',
-                          choices=[('lx','lx'),('Lx','Lx'),('dt','dt'),
-                                   ('max_t','max_t'),('k_MA','k_MA'),
-                                   ('nu_MA','nu_MA'),('k_SM','k_SM'),
-                                   ('nu_SM','nu_SM'),('n_SM','n_SM'),
-                                   ('r_seed','r_seed'),('r_test','r_test')
-                                  ])
+    batchvar = SelectField(u'Batch variable',choices=CHANGEABLE_SIM_PARAM)
     batchmin = FloatField(u'Batch min')
     batchstep = FloatField(u'Batch step')
     batchmax = FloatField(u'Batch max')
@@ -50,4 +49,75 @@ class NewSimulationForm(Form):
     n_SM = FloatField(u'n_SM',[Required(),NumberRange(1e-9,1e9)])
     r_seed = FloatField(u'r_seed',[Required(),NumberRange(0,1e6)])
     r_test = FloatField(u'r_test',[Required(),NumberRange(0,1e6)])
+
+
+
+class SearchSimulationForm(Form):
+    name = TextField(u'Name')
+    group = SelectField(u'Group')
+    status = SelectField(u'Status',choices=SIMULATION_STATUS,default='all')
+
+    set_lx = BooleanField(u'Set range for lx')
+    from_lx = FloatField(u'The range of lx')
+    to_lx = FloatField(u'To lx')
+
+    set_Lx = BooleanField(u'Set range for Lx')
+    from_Lx = FloatField(u'The range of Lx')
+    to_Lx = FloatField(u'To Lx')
+
+    set_dt = BooleanField(u'Set range for dt')
+    from_dt = FloatField(u'The range of dt')
+    to_dt = FloatField(u'To dt')
+
+    set_max_t = BooleanField(u'Set range for max_t')
+    from_max_t = FloatField(u'The range of max_t')
+    to_max_t = FloatField(u'To max_t')
+
+    set_k_MA = BooleanField(u'Set range for k_MA')
+    from_k_MA = FloatField(u'The range of k_MA')
+    to_k_MA = FloatField(u'To k_MA')
+
+    set_nu_MA = BooleanField(u'Set range for nu_MA')
+    from_nu_MA = FloatField(u'The range of nu_MA')
+    to_nu_MA = FloatField(u'To nu_MA')
+
+    set_k_SM = BooleanField(u'Set range for k_SM')
+    from_k_SM = FloatField(u'The range of k_SM')
+    to_k_SM = FloatField(u'To k_SM')
+
+    set_nu_SM = BooleanField(u'Set range for nu_SM')
+    from_nu_SM = FloatField(u'The range of nu_SM')
+    to_nu_SM = FloatField(u'To nu_SM')
+
+    set_n_SM = BooleanField(u'Set range for n_SM')
+    from_n_SM = FloatField(u'The range of n_SM')
+    to_n_SM = FloatField(u'To n_SM')
+
+    set_r_seed = BooleanField(u'Set range for r_seed')
+    from_r_seed = FloatField(u'The range of r_seed')
+    to_r_seed = FloatField(u'To r_seed')
+
+    set_r_test = BooleanField(u'Set range for r_test')
+    from_r_test = FloatField(u'The range of r_test')
+    to_r_test = FloatField(u'To r_test')
+
+    set_create_time = BooleanField(u'Set range for create_time (format: %Y-%m-%d %H:%M:%S)')
+    from_create_time = DateTimeField(u'The range of create_time')
+    to_create_time = DateTimeField(u'To date')
+
+    set_update_time = BooleanField(u'Set range for update_time')
+    from_update_time = DateTimeField(u'The range of update_time')
+    to_update_time = DateTimeField(u'To date')
+
+    set_run_time = BooleanField(u'Set range for run_time')
+    from_run_time = DateTimeField(u'The range of run_time')
+    to_run_time = DateTimeField(u'To date')
+
+    set_finish_time = BooleanField(u'Set range for finish_time')
+    from_finish_time = DateTimeField(u'The range of finish_time')
+    to_finish_time = DateTimeField(u'To date')
+
+    set_abort_time = BooleanField(u'Set range for abort_time')
+    from_abort_time = DateTimeField(u'The range of abort_time')
+    to_abort_time = DateTimeField(u'To date')
 

@@ -1,5 +1,7 @@
-{% macro render_field_no_label(field) %}
-<dd> {{ field(**kwargs)|safe }}
+{% macro render_field(field) %}
+<dt> {{ field.label }} </dt>
+<dd> 
+{{ field(**kwargs)|safe }}
   {% if field.errors %}
     <ul class=error>
       {% for error in field.errors %}<li>{{ error }}{% endfor %}
@@ -8,9 +10,39 @@
 </dd>
 {% endmacro %}
 
-{% macro render_field(field) %}
-<dt> {{ field.label }}
-<dd> {{ field(**kwargs)|safe }}
+{% macro render_ranges(set_field,from_field,to_field) %}
+<dt> {{ set_field.label }} </dt>
+<dd>
+{{ set_field(**kwargs)|safe }}
+  {% if set_field.errors %}
+    <ul class=error>
+      {% for error in set_field.errors %}<li>{{ error }}{% endfor %}
+    </ul>
+  {% endif %}
+</dd>
+<fieldset id={{ set_field.id }}_set style='display:none'>
+<dd>
+{{ from_field(**kwargs)|safe }}
+  {% if from_field.errors %}
+    <ul class=error>
+      {% for error in from_field.errors %}<li>{{ error }}{% endfor %}
+    </ul>
+  {% endif %}
+</dd>
+<dd>
+{{ to_field(**kwargs)|safe }}
+  {% if to_field.errors %}
+    <ul class=error>
+      {% for error in to_field.errors %}<li>{{ error }}{% endfor %}
+    </ul>
+  {% endif %}
+</dd>
+</fieldset>
+{% endmacro %}
+
+{% macro render_field_no_label(field) %}
+<dd> 
+{{ field(**kwargs)|safe }}
   {% if field.errors %}
     <ul class=error>
       {% for error in field.errors %}<li>{{ error }}{% endfor %}
@@ -18,3 +50,4 @@
   {% endif %}
 </dd>
 {% endmacro %}
+

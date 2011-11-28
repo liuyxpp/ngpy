@@ -3,7 +3,6 @@
 {% block title %}Edit a Simulation{% endblock %}
 {% block body %}
   <h2>Edit a Simulation</h2>
-  {% if error %}<div class=error><strong>Error:</strong> {{ error }}</div>{% endif %}
   <form action="" method="POST">
     <dl>
         {{ render_field(form.simulations) }}

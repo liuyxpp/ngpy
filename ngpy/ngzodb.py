@@ -13,6 +13,7 @@ import uuid
 import math
 import datetime
 import copy
+from pickle import dumps
 
 from zodburi import resolve_uri
 from ZODB.DB import DB
@@ -21,11 +22,41 @@ from persistent import Persistent
 from persistent.mapping import PersistentMapping
 from BTrees import IOBTree,OOBTree
 
+from ngpy import app
+
 from .particle import Particle
 from .vector2d import Vector2D
 from .ngofflattice_kooi import Param as FileParam
 
-from .ngutil import now2str
+from .ngutil import now2str,str2time
+
+SIMULATION_PARAMETERS = [('lx','lx'),('ly','ly'),
+                         ('Lx','Lx'),('Lx','Lx'),
+                         ('dt','dt'),('Nx','Nx'),
+                         ('max_t','max_t'),('k_MA','k_MA'),
+                         ('nu_MA','nu_MA'),('k_SM','k_SM'),
+                         ('nu_SM','nu_SM'),('n_SM','n_SM'),
+                         ('r0_SM','r0_SM'),
+                         ('r_seed','r_seed'),('r_test','r_test')]
+
+CHANGEABLE_SIM_PARAM = [('lx','lx'),('Lx','Lx'),('dt','dt'),
+                        ('max_t','max_t'),('k_MA','k_MA'),
+                        ('nu_MA','nu_MA'),('k_SM','k_SM'),
+                        ('nu_SM','nu_SM'),('n_SM','n_SM'),
+                        ('r_seed','r_seed'),('r_test','r_test')]
+
+SIMULATION_STATUS = [('NEW','NEW'),('UPDATE','UPDATE'),
+                  ('ACTIVE','ACTIVE'),('FINISH','FINISH'),
+                  ('ABORT','ABORT'),('all','All')]
+
+
+SIMULATION_TIME = [('create_time','create_time'),
+                   ('update_time','update_time'),
+                   ('run_time','run_time'),
+                   ('finish_time','finish_time'),
+                   ('abort_time','abort_time')]
+
+SIMULATION_CMD = [('RUN','RUN'),('ABORT','ABORT')]
 
 def connect_zodb(zodb_URI):
     storage_factory,dbkw = resolve_uri(zodb_URI)
@@ -94,6 +125,74 @@ def del_simulation(db,sim_id):
         if simulation['status'] != 'ACTIVE':
             del simulations[sim_uuid]
             transaction.commit()
+
+
+def find_simulations(db,form):
+    results = []
+    simulations = db['simulations']
+    for sim_uuid,simulation in simulations.items():
+        if form.name.data != '' and simulation['name'] != form.name.data:
+            continue
+        if form.group.data != 'all' and simulation['group'] != form.group.data:
+            continue
+        if form.status.data != 'all' and simulation['status'] != form.status.data:
+            continue
+        # parameters
+        params = simulation['parameter']
+        param_in_range = True
+        for k,v in CHANGEABLE_SIM_PARAM:
+            is_set = getattr(getattr(form,'set_'+k),('data'))
+            if is_set:
+                val = getattr(params,k)
+                val_min = getattr(getattr(form,'from_'+k),'data')
+                val_max = getattr(getattr(form,'to_'+k),'data')
+                # ignore the wrong query
+                if val_min > val_max:
+                    continue
+                if val < val_min or val > val_max:
+                    param_in_range = False
+                    break
+        if not param_in_range:
+            continue
+        # times
+        sim_in_time = True
+        for k,v in SIMULATION_TIME:
+            is_set = getattr(getattr(form,'set_'+k),('data'))
+            if is_set:
+                time = str2time(simulation[k])
+                time_min = getattr(getattr(form,'from_'+k),'data')
+                time_max = getattr(getattr(form,'to_'+k),'data')
+                if time is None:
+                    sim_in_time = False
+                    break
+                # ignore the wrong query
+                if time_min > time_max:
+                    continue
+                if time < time_min or time > time_max:
+                    sim_in_time = False
+                    break
+        if not sim_in_time:
+            continue
+        results.append((str(sim_uuid),simulation))
+    return results
+
+
+def execute_simulation(redis,sim_id):
+    qkey = app.config['REDIS_QUEUE_KEY']
+    key = '%s:%s' % (qkey,sim_id)
+    cmd = 'RUN'
+    zodb = app.config['ZODB_STORAGE']
+    s = dumps((key,cmd,zodb,sim_id))
+    redis.rpush(qkey,s)
+
+
+def cancel_simulation(redis,sim_id):
+    qkey = app.config['REDIS_QUEUE_KEY']
+    key = '%s:%s' % (qkey,sim_id)
+    cmd = 'ABORT'
+    zodb = app.config['ZODB_STORAGE']
+    s = dumps((key,cmd,zodb,sim_id))
+    redis.rpush(qkey,s)
 
 
 def Particles(Persistent):

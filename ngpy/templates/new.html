@@ -65,7 +65,6 @@
 {% endblock %}
 {% block body %}
   <h2>Create a Simulation</h2>
-  {% if form.errors %}<div class=error><strong>Error:</strong> {{ form.errors }}</div>{% endif %}
   <form action="" method="POST">
     <dl>
         {{ form.csrf() }}

@@ -18,6 +18,7 @@
     <a href="{{ url_for('new_simulation') }}">Create</a> |
     <a href="{{ url_for('issue_edit') }}">Edit</a> |
     <a href="{{ url_for('delete_simulation') }}">Delete</a> |
+    <a href="{{ url_for('search_simulation') }}">Search</a> |
   </div>
   {% with flashes = get_flashed_messages() %}
     {% if flashes %}

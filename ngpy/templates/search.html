@@ -1,0 +1,60 @@
+{% extends "layout.html" %}
+{% from "_formhelpers.html" import render_field %}
+{% from "_formhelpers.html" import render_ranges %}
+{% block title %}Search for Simulations{% endblock %}
+{% block ajax %}
+<script type=text/javascript>
+    $.ajaxSetup({
+        beforeSend: function(xhr,settings){
+            if(!(/^http:.*/.test(settings.url) || /^http:.*/.test(settings.url))){
+            // Only send the token to relative URLs i.e. locally.
+            xhr.setRequestHeader("X-CSRFToken",
+                                 $("#csrfmiddlewaretoken").val());
+            }
+        }
+    });
+    $(function() {
+        $(':checkbox').change(function(){
+            var changed_id = '#' + $(this).attr('id') + '_set';
+            if(this.checked){
+                $(changed_id).attr('style','display:block');
+            }else{
+                $(changed_id).attr('style','display:none');
+            }
+        }).trigger('change') // Trigger the event when load or reload
+    });
+</script>
+{% endblock %}
+{% block body %}
+  <h2>Search for Simulations</h2>
+  <form action="" method="POST">
+    <dl>
+        {{ form.csrf() }}
+        {{ render_field(form.name) }}
+        {{ render_field(form.group) }}
+        {{ render_field(form.status) }}
+        <fieldset id='param'>
+        {{ render_ranges(form.set_lx,form.from_lx,form.to_lx) }}
+        {{ render_ranges(form.set_Lx,form.from_Lx,form.to_Lx) }}
+        {{ render_ranges(form.set_dt,form.from_dt,form.to_dt) }}
+        {{ render_ranges(form.set_max_t,form.from_max_t,form.to_max_t) }}
+        {{ render_ranges(form.set_k_MA,form.from_k_MA,form.to_k_MA) }}
+        {{ render_ranges(form.set_nu_MA,form.from_nu_MA,form.to_nu_MA) }}
+        {{ render_ranges(form.set_k_SM,form.from_k_SM,form.to_k_SM) }}
+        {{ render_ranges(form.set_nu_SM,form.from_nu_SM,form.to_nu_SM) }}
+        {{ render_ranges(form.set_n_SM,form.from_n_SM,form.to_n_SM) }}
+        {{ render_ranges(form.set_r_seed,form.from_r_seed,form.to_r_seed) }}
+        {{ render_ranges(form.set_r_test,form.from_r_test,form.to_r_test) }}
+        </fieldset>
+        <fieldset id='time'>
+        {{ render_ranges(form.set_create_time,form.from_create_time,form.to_create_time) }}
+        {{ render_ranges(form.set_update_time,form.from_update_time,form.to_update_time) }}
+        {{ render_ranges(form.set_run_time,form.from_run_time,form.to_run_time) }}
+        {{ render_ranges(form.set_finish_time,form.from_finish_time,form.to_finish_time) }}
+        {{ render_ranges(form.set_abort_time,form.from_abort_time,form.to_abort_time) }}
+        </fieldset>
+    </dl>
+    <div class=actions><input type=submit value="Search"></div>
+  </form>
+{% endblock %}
+

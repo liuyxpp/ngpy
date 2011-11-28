@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+{% from "_listhelpers.html" import render_list %}
+{% block title %}Search Results{% endblock %}
+{% block body %}
+  {{ render_list("Resulted Simulations",simulations) }}
+  <form action={{ url_for('batch_run_simulation') }} method="POST">
+    {% for (sim_id,simulation) in simulations %}
+      <input type='hidden' id={{ sim_id }} name={{ sim_id }}>
+    {% endfor %}
+    <div class=actions><input type=submit value="Run all simulations"></div>
+  </form>
+  <p></p>
+  <form action={{ url_for('batch_abort_simulation') }} method="POST">
+    {% for (sim_id,simulation) in simulations %}
+      <input type='hidden' id={{ sim_id }} name={{ sim_id }}>
+    {% endfor %}
+    <div class=actions><input type=submit value="Abort all simulations"></div>
+  </form>
+{% endblock %}
