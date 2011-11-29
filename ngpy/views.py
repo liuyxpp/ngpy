@@ -14,7 +14,7 @@ from .ngzodb import setup_simulation, update_simulation, del_simulation
 from .ngzodb import find_simulations
 from .ngzodb import execute_simulation,cancel_simulation
 from .ngutil import FormParam, now2str
-from .ngplot import render_simulation_frame
+from .ngplot import render_simulation_frame,render_psd,calc_volume,calc_n
 
 @app.route('/',methods=['GET','POST'])
 def index():
@@ -362,3 +362,63 @@ def search_simulation():
 
 
 
+
+@app.route("/_psdfeed",methods=['GET','POST'])
+def psd_feed():
+    sim_id = request.args.get("simid")
+    frame_id = request.args.get("frame",0,type=int)
+    psd_type = request.args.get("psdtype",'density')
+    simulations = db['simulations']
+    simulation = simulations[uuid.UUID(sim_id)]
+
+    if not simulation.has_key('frames'):
+        frame_id = -1
+    frame_max = len(simulation['frames']) - 1 # frame_id is (0, frame_max)
+    if frame_id < 0 or frame_id > frame_max:
+        return jsonify(imgsrc="")
+
+    return jsonify(imgsrc=url_for("render_psd",
+                                  sim_id=sim_id,
+                                  frame=frame_id,
+                                  psdtype=psd_type)
+                  )
+
+
+@app.route("/_volfeed",methods=['GET','POST'])
+def volume_feed():
+    sim_id = request.args.get("simid")
+    frame_id = request.args.get("frame",0,type=int)
+    simulations = db['simulations']
+    simulation = simulations[uuid.UUID(sim_id)]
+
+    if not simulation.has_key('frames'):
+        frame_id = -1
+    frames = simulation['frames']
+    frame_max = len(frames) - 1 # frame_id is (0, frame_max)
+    if frame_id < 0 or frame_id > frame_max:
+        return jsonify(volm=0,vols=0,volt=0)
+
+    frame = frames[frame_id]
+    ps = simulation['particle_seed']
+    volm,vols,volt = calc_volume(frame,ps)
+    return jsonify(volm=volm,vols=vols,volt=volt)
+
+
+@app.route("/_nucfeed",methods=['GET','POST'])
+def nucleation_feed():
+    sim_id = request.args.get("simid")
+    frame_id = request.args.get("frame",0,type=int)
+    simulations = db['simulations']
+    simulation = simulations[uuid.UUID(sim_id)]
+
+    if not simulation.has_key('frames'):
+        frame_id = -1
+    frames = simulation['frames']
+    frame_max = len(frames) - 1 # frame_id is (0, frame_max)
+    if frame_id < 0 or frame_id > frame_max:
+        return jsonify(n=0)
+
+    frame = frames[frame_id]
+    ps = simulation['particle_seed']
+    n = calc_n(frame)
+    return jsonify(n=n)

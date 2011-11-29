@@ -42,6 +42,55 @@
                 sliderframe.slider("value",$(this).val());
             }
         });
+        function psd(){
+            var frame_id = sliderframe.slider("value");
+            $.getJSON($SCRIPT_ROOT+'/_psdfeed',{
+                    simid:$('#simid').val(),
+                    frame:frame_id,
+                    psdtype:'number'
+                    }, 
+                    function(data){
+                        $('#curpsdimg').attr("src",data.imgsrc);
+                    });
+        }
+        function vol(){
+            var frame_id = sliderframe.slider("value");
+            $.getJSON($SCRIPT_ROOT+'/_volfeed',{
+                    simid:$('#simid').val(),
+                    frame:frame_id,
+                    }, 
+                    function(data){
+                        $('#curvolres').text('Volume of metastable phase: '+data.volm+' stable phase: '+data.vols+ ' total:'+data.volt);
+                    });
+        }
+        function nuc(){
+            var frame_id = sliderframe.slider("value");
+            $.getJSON($SCRIPT_ROOT+'/_nucfeed',{
+                    simid:$('#simid').val(),
+                    frame:frame_id,
+                    }, 
+                    function(data){
+                        $('#curnres').text('Number of nucleation events: '+data.n);
+                    });
+        }
+        $('#curpsd').button();
+        $('#curpsd').click(function(){
+            psd();
+        });
+        $('#curvol').button();
+        $('#curvol').click(function(){
+            vol();
+        });
+        $('#curn').button();
+        $('#curn').click(function(){
+            nuc();
+        });
+        $('#curall').button();
+        $('#curall').click(function(){
+            psd();
+            vol();
+            nuc();
+        });
         $.ajaxSetup( {cache:false} );
     });
 </script>
@@ -60,6 +109,15 @@
   <div><p></p></div>
   <div id="curframe"></div>
   <img id="liveimg" src="" alt="loading..." /> 
+  <h3>Analyze Current Frame</h3>
+  <img id="curpsdimg" src="" alt="PSD image to be calculated..." /> 
+  <div id="curvolres">Volume of metastable phase: stable phase: total: </div>
+  <div id="curnres">Number of nucleation events: </div>
+  <button id="curall">Calculate All</button>
+  <button id="curpsd">PSD</button>
+  <button id="curvol">Volume</button>
+  <button id="curn">Nucleation Events</button>
+  <h3>Analyze the Simulation</h3>
   {{ render_parameters(params) }}
   {% if error %}<div class=error><strong>Error:</strong> {{ error }}</div>{% endif %}
 {% endblock %}
