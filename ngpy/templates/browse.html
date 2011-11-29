@@ -1,21 +1,65 @@
 {% extends "layout.html" %}
 {% from "_parameters.html" import render_parameters %}
 {% block title %}Browse a Simulation{% endblock %}
+{% block ajax %}
+<script type=text/javascript>
+    $(function() {
+        var frame_max = $('#framemax').val();
+        function render(frame_id){
+            $.getJSON($SCRIPT_ROOT+'/_browsefeed',{
+                    simid:$('#simid').val(),
+                    frame:frame_id //$('#selectframe').val()
+                    }, 
+                    function(data){
+                        $('#liveimg').attr("src",data.imgsrc);
+                        $('#curframe').text("Current frame: "+data.frame);
+                    });
+        }
+        var sliderframe = $('#sliderframe').slider({
+            min:0,
+            max:frame_max,
+            change:function(event,ui){ 
+                render(ui.value); 
+            }
+        });
+        var spinner = $('#selectframe').spinner({
+            spin:function(event,ui){
+                var fid = ui.value;
+                if(fid>frame_max){
+                    $(this).spinner("value",0);
+                    return false;
+                }
+                else if(fid<0){
+                    $(this).spinner("value",frame_max);
+                    return false;
+                }
+            },
+            // ui.value didn't work for change
+            change:function(event,ui){
+                sliderframe.slider("value",$(this).val());
+            },
+            stop:function(event,ui){
+                sliderframe.slider("value",$(this).val());
+            }
+        });
+        $.ajaxSetup( {cache:false} );
+    });
+</script>
+{% endblock %}
 {% block body %}
   <h2>Browse a Simulation</h2>
   <h3>Simulation {{ sim_id }}</h3>
-  <ul>
-    <li>Current frame: {{ frame_id }}</li>
-    <li><a href="{{ url_for('browse_simulation',sim_id=sim_id,frame=0) }}">0</a></li>
-    <li><a href="{{ url_for('browse_simulation',sim_id=sim_id,frame=frame_max) }}">{{ frame_max }}</a></li>
-  {% if not frame_id == 0 %}
-    <li><a href="{{ url_for('browse_simulation',sim_id=sim_id,frame=frame_id-1) }}">Previous</a></li>
-  {% endif %}
-  {% if not frame_id == frame_max %}
-    <li><a href="{{ url_for('browse_simulation',sim_id=sim_id,frame=frame_id+1) }}">Next</a></li>
-  {% endif %}
-  </ul>
-  <img src="{{ url_for('render_simulation_frame',sim_id=sim_id,frame=frame_id) }}" alt="loading..." /> 
+  <form id="browse">
+    <input id=simid type=hidden value={{ sim_id }} />
+    <input id=framemax type=hidden value={{ frame_max }} />
+  </form>
+  <span>Select a frame to show </span>
+  <input id="selectframe" name="value" />
+  <div><p></p></div>
+  <div id="sliderframe"></div>
+  <div><p></p></div>
+  <div id="curframe"></div>
+  <img id="liveimg" src="" alt="loading..." /> 
   {{ render_parameters(params) }}
   {% if error %}<div class=error><strong>Error:</strong> {{ error }}</div>{% endif %}
 {% endblock %}

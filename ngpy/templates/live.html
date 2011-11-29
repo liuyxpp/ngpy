@@ -13,6 +13,7 @@
                     }else{
                         $('#liveimg').attr("src",data.imgsrc);
                         $('#curframe').text("Current frame: "+data.frame);
+                        $('#simprogress').progressbar({value : data.progress});
                     }
                     });
         }, 4000);
@@ -26,6 +27,7 @@
   <h3>Simulation {{ sim_id }}</h3>
   <input id=simid type=hidden value={{ sim_id }} />
   <div id=curframe></div>
+  <div id=simprogress></div>
   <div>
     You can <a href="{{ url_for('browse_simulation',sim_id=sim_id) }}">Browse This Simulation</a> or
     <a href="{{ url_for('abort_simulation',sim_id=sim_id) }}">Abort This Simulation</a>.

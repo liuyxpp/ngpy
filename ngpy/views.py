@@ -207,7 +207,7 @@ def select_simulation():
     )
 
 
-@app.route("/browse/<sim_id>")
+@app.route("/browse/<sim_id>",methods=['GET','POST'])
 def browse_simulation(sim_id):
     simulations = db['simulations']
     sim_uuid = uuid.UUID(sim_id)
@@ -224,6 +224,26 @@ def browse_simulation(sim_id):
                            params=simulation['parameter'],
                            sim_id=sim_id,frame_id=frame_id,
                            frame_max=frame_max)
+
+
+@app.route("/_browsefeed",methods=['GET','POST'])
+def browse_feed():
+    sim_id = request.args.get("simid")
+    frame_id = request.args.get("frame",0,type=int)
+    simulations = db['simulations']
+    simulation = simulations[uuid.UUID(sim_id)]
+
+    if not simulation.has_key('frames'):
+        frame_id = -1
+    frame_max = len(simulation['frames']) - 1 # frame_id is (0, frame_max)
+    if frame_id < 0 or frame_id > frame_max:
+        frame_id = -1
+        return jsonify(imgsrc="",frame=frame_id)
+
+    return jsonify(imgsrc=url_for("render_simulation_frame",
+                                  sim_id=sim_id,frame=frame_id),
+                   frame=frame_id
+                  )
 
 
 @app.route("/run/<sim_id>")
@@ -306,6 +326,8 @@ def live_feed():
     sim_id = request.args.get("simid")
     simulations = db['simulations']
     simulation = simulations[uuid.UUID(sim_id)]
+    params = simulation['parameter']
+    frame_max = params.max_t / params.dt
 
     if simulation['status'] != 'ACTIVE':
         return jsonify(redirect=True,
@@ -315,9 +337,12 @@ def live_feed():
         return jsonify(imgsrc="")
 
     frame_id = len(simulation['frames']) - 1
+    progress = (frame_id + 1) / frame_max
+    progress = int(round(progress * 100))
     return jsonify(imgsrc=url_for("render_simulation_frame",
                                   sim_id=sim_id,frame=frame_id),
-                   frame=frame_id
+                   frame=frame_id,
+                   progress=progress
                   )
 
 
