@@ -133,8 +133,89 @@ def calc_volume(frame,ps):
     return vol_MA,vol_SM,vol_total
 
 
+@app.route("/_volume/<sim_id>")
+def render_volume(sim_id):
+    frame_low = request.args.get('framelow',type=int)
+    frame_high = request.args.get('framehigh',type=int)
+    frame_interval = request.args.get('frameinterval',type=int)
+    simulations = db['simulations']
+    sim_uuid = uuid.UUID(sim_id)
+    simulation = simulations[sim_uuid]
+    frames = simulation['frames']
+
+    p = simulation['parameter']
+    ps = simulation['particle_seed']
+    frame_list = range(frame_low,frame_high+1,frame_interval)
+    t_list = []
+    volm_list = [] # metastable volume
+    vols_list = [] # stable volume
+    volt_list = [] # total volume
+    for frame_id in frame_list:
+        t = (frame_id + 1) * p.dt # t start from dt
+        frame = frames[frame_id]
+        volm,vols,volt = calc_volume(frame,ps)
+        t_list.append(t)
+        volm_list.append(volm)
+        vols_list.append(vols)
+        volt_list.append(volt)
+
+    fig=Figure()
+    ax=fig.add_subplot(111)
+    ax.plot(t_list,volm_list,'b-')
+    ax.plot(t_list,vols_list,'r-')
+    ax.plot(t_list,volt_list,'g-')
+
+    canvas = FigureCanvas(fig)
+    png_output = StringIO.StringIO()
+    canvas.print_png(png_output)
+    response = make_response(png_output.getvalue())
+    response.headers['Content-Type'] = 'image/png'
+    return response
+
+
 def calc_n(frame):
     pa = frame['particle_SM_active']
     pi = frame['particle_SM_inactive']
 
     return len(pa)+len(pi)
+
+
+@app.route("/_nucleation/<sim_id>")
+def render_nucleation(sim_id):
+    n_type = request.args.get('ntype')
+    frame_low = request.args.get('framelow',type=int)
+    frame_high = request.args.get('framehigh',type=int)
+    frame_interval = request.args.get('frameinterval',type=int)
+    simulations = db['simulations']
+    sim_uuid = uuid.UUID(sim_id)
+    simulation = simulations[sim_uuid]
+    frames = simulation['frames']
+
+    p = simulation['parameter']
+    ps = simulation['particle_seed']
+    aseed = 1e-6 * np.pi * ps.r**2
+    frame_list = range(frame_low,frame_high+1,frame_interval)
+    t_list = []
+    n_list = []
+    for frame_id in frame_list:
+        t = (frame_id + 1) * p.dt # t start from dt
+        frame = frames[frame_id]
+        n = calc_n(frame)
+        if n_type == 'density':
+            pm = frame['particle_MA']
+            am = 1e-6 * np.pi * pm.r**2
+            n = n / (am - aseed)
+        t_list.append(t)
+        n_list.append(n)
+
+    fig=Figure()
+    ax=fig.add_subplot(111)
+    ax.plot(t_list,n_list,'o')
+
+    canvas = FigureCanvas(fig)
+    png_output = StringIO.StringIO()
+    canvas.print_png(png_output)
+    response = make_response(png_output.getvalue())
+    response.headers['Content-Type'] = 'image/png'
+    return response
+

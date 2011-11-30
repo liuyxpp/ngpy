@@ -15,6 +15,7 @@ from .ngzodb import find_simulations
 from .ngzodb import execute_simulation,cancel_simulation
 from .ngutil import FormParam, now2str
 from .ngplot import render_simulation_frame,render_psd,calc_volume,calc_n
+from .ngplot import render_volume,render_nucleation
 
 @app.route('/',methods=['GET','POST'])
 def index():
@@ -404,6 +405,30 @@ def volume_feed():
     return jsonify(volm=volm,vols=vols,volt=volt)
 
 
+@app.route("/_simvolfeed",methods=['GET','POST'])
+def simulation_volume_feed():
+    sim_id = request.args.get("simid")
+    simulations = db['simulations']
+    simulation = simulations[uuid.UUID(sim_id)]
+
+    if not simulation.has_key('frames'):
+        return jsonify(imgsrc="")
+
+    frames = simulation['frames']
+    frame_max = len(frames) - 1 # frame_id is (0, frame_max)
+    frame_low = request.args.get("framelow",0,type=int)
+    frame_high = request.args.get("framehigh",frame_max,type=int)
+    frame_interval = request.args.get("frameinterval",1,type=int)
+
+    return jsonify(imgsrc=url_for("render_volume",
+                                  sim_id=sim_id,
+                                  framelow=frame_low,
+                                  framehigh=frame_high,
+                                  frameinterval=frame_interval
+                                  )
+                  )
+
+
 @app.route("/_nucfeed",methods=['GET','POST'])
 def nucleation_feed():
     sim_id = request.args.get("simid")
@@ -422,3 +447,29 @@ def nucleation_feed():
     ps = simulation['particle_seed']
     n = calc_n(frame)
     return jsonify(n=n)
+
+
+@app.route("/_simnucfeed",methods=['GET','POST'])
+def simulation_nucleation_feed():
+    sim_id = request.args.get("simid")
+    simulations = db['simulations']
+    simulation = simulations[uuid.UUID(sim_id)]
+
+    if not simulation.has_key('frames'):
+        return jsonify(imgsrc="")
+    frames = simulation['frames']
+    frame_max = len(frames) - 1 # frame_id is (0, frame_max)
+
+    n_type = request.args.get("ntype",'density')
+    frame_low = request.args.get("framelow",0,type=int)
+    frame_high = request.args.get("framehigh",frame_max,type=int)
+    frame_interval = request.args.get("frameinterval",1,type=int)
+
+    return jsonify(imgsrc=url_for("render_nucleation",
+                                  sim_id=sim_id,
+                                  ntype=n_type,
+                                  framelow=frame_low,
+                                  framehigh=frame_high,
+                                  frameinterval=frame_interval
+                                  )
+                  )

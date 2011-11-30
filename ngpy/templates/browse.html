@@ -12,7 +12,7 @@
                     }, 
                     function(data){
                         $('#liveimg').attr("src",data.imgsrc);
-                        $('#curframe').text("Current frame: "+data.frame);
+                        $('#curframe').val(data.frame);
                     });
         }
         var sliderframe = $('#sliderframe').slider({
@@ -60,7 +60,7 @@
                     frame:frame_id,
                     }, 
                     function(data){
-                        $('#curvolres').text('Volume of metastable phase: '+data.volm+' stable phase: '+data.vols+ ' total:'+data.volt);
+                        $('#curvolres').text('Volume of metastable phase: '+data.volm+' stable phase: '+data.vols+ ' total: '+data.volt);
                     });
         }
         function nuc(){
@@ -91,6 +91,72 @@
             vol();
             nuc();
         });
+        var spinnersim = $('#spinnersim').spinner({
+            spin:function(event,ui){
+                var fid = ui.value;
+                if(fid>frame_max){
+                    $(this).spinner("value",1);
+                    return false;
+                }
+                else if(fid<1){
+                    $(this).spinner("value",frame_max);
+                    return false;
+                }
+            }
+        });
+        $('#spinnersim').val(1);
+        var slidersim = $('#slidersim').slider({
+            range:true,
+            min:0,
+            max:frame_max,
+            values:[0,frame_max],
+            slide:function(event,ui){
+                    $("#framerange").val(ui.values[0]+"-"+ui.values[1]);
+            }
+        });
+        $("#framerange").val(slidersim.slider("values",0)+"-"+slidersim.slider("values",1));
+        function simvol(){
+            var frame_low = slidersim.slider("values",0);
+            var frame_high = slidersim.slider("values",1);
+            var frame_interval = $('#spinnersim').val();
+            $.getJSON($SCRIPT_ROOT+'/_simvolfeed',{
+                    simid:$('#simid').val(),
+                    framelow:frame_low,
+                    framehigh:frame_high,
+                    frameinterval:frame_interval
+                    }, 
+                    function(data){
+                        $('#simvolimg').attr("src",data.imgsrc);
+                    });
+        }
+        function simnuc(){
+            var frame_low = slidersim.slider("values",0);
+            var frame_high = slidersim.slider("values",1);
+            var frame_interval = $('#spinnersim').val();
+            $.getJSON($SCRIPT_ROOT+'/_simnucfeed',{
+                    simid:$('#simid').val(),
+                    ntype:'density',
+                    framelow:frame_low,
+                    framehigh:frame_high,
+                    frameinterval:frame_interval
+                    }, 
+                    function(data){
+                        $('#simnimg').attr("src",data.imgsrc);
+                    });
+        }
+        $('#simvol').button();
+        $('#simvol').click(function(){
+            simvol();
+        });
+        $('#simn').button();
+        $('#simn').click(function(){
+            simnuc();
+        });
+        $('#simall').button();
+        $('#simall').click(function(){
+            simvol();
+            simnuc();
+        });
         $.ajaxSetup( {cache:false} );
     });
 </script>
@@ -107,7 +173,10 @@
   <div><p></p></div>
   <div id="sliderframe"></div>
   <div><p></p></div>
-  <div id="curframe"></div>
+  <p>
+    <label for="curframe">Current frame:</label>
+    <input type="text" id="curframe" style="border:0;color:#f6931f;font-weight:bold;">
+  </p>
   <img id="liveimg" src="" alt="loading..." /> 
   <h3>Analyze Current Frame</h3>
   <img id="curpsdimg" src="" alt="PSD image to be calculated..." /> 
@@ -117,7 +186,22 @@
   <button id="curpsd">PSD</button>
   <button id="curvol">Volume</button>
   <button id="curn">Nucleation Events</button>
-  <h3>Analyze the Simulation</h3>
+  <h3>Analyze Simulation</h3>
+  <img id="simvolimg" src="" alt="V(t) to be calculated..." />
+  <br />
+  <img id="simnimg" src="" alt="N(t) to be calculated..." />
+  <br />
+  <span>Select an interval</span>
+  <input id="spinnersim" name="value" />
+  <p>
+    <label for="framerange">Frame range:</label>
+    <input type="text" id="framerange" style="border:0;color:#f6931f;font-weight:bold;">
+  </p>
+  <div id="slidersim"></div>
+  <div><p></p></div>
+  <button id="simall">Calculate All</button>
+  <button id="simvol">V(t)</button>
+  <button id="simn">N(t)</button>
   {{ render_parameters(params) }}
   {% if error %}<div class=error><strong>Error:</strong> {{ error }}</div>{% endif %}
 {% endblock %}
