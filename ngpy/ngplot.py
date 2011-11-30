@@ -9,6 +9,8 @@
     :copyright: (c) 2011 by Yi-Xin Liu (liuyxpp@gmail.com).
     :license: BSD, see LICENSE for more details.
 """
+import os
+import csv
 import uuid
 
 import numpy as np
@@ -27,6 +29,8 @@ GRAY_SEED = 255
 GRAY_INACTIVE = 223
 GRAY_ACTIVE_BASE = 95
 GRAY_ACTIVE_STEP = 2
+
+TMP_PATH = os.path.dirname(__file__) + "/static/tmp/"
 
 @app.route("/render/<sim_id>")
 def render_simulation_frame(sim_id):
@@ -133,11 +137,10 @@ def calc_volume(frame,ps):
     return vol_MA,vol_SM,vol_total
 
 
-@app.route("/_volume/<sim_id>")
-def render_volume(sim_id):
-    frame_low = request.args.get('framelow',type=int)
-    frame_high = request.args.get('framehigh',type=int)
-    frame_interval = request.args.get('frameinterval',type=int)
+# TODO: make the full range and interval=1 file to cache the result
+#       Next the same request will return directly
+#       render_volume will use the existing file to retieve data
+def make_volfile(sim_id,frame_low,frame_high,frame_interval):
     simulations = db['simulations']
     sim_uuid = uuid.UUID(sim_id)
     simulation = simulations[sim_uuid]
@@ -146,18 +149,36 @@ def render_volume(sim_id):
     p = simulation['parameter']
     ps = simulation['particle_seed']
     frame_list = range(frame_low,frame_high+1,frame_interval)
-    t_list = []
-    volm_list = [] # metastable volume
-    vols_list = [] # stable volume
-    volt_list = [] # total volume
+    data_list = []
     for frame_id in frame_list:
         t = (frame_id + 1) * p.dt # t start from dt
         frame = frames[frame_id]
         volm,vols,volt = calc_volume(frame,ps)
-        t_list.append(t)
-        volm_list.append(volm)
-        vols_list.append(vols)
-        volt_list.append(volt)
+        data_list.append((t,volm,vols,volt))
+    datafile = sim_id + '-vol.csv'
+    datapath = TMP_PATH + datafile
+    with open(datapath,'wb') as f:
+        writer = csv.writer(f)
+        writer.writerows(data_list)
+    return datafile
+
+
+@app.route("/_volume")
+def render_volume():
+    datafile = request.args.get('datafile')
+    datapath = TMP_PATH + datafile
+    t_list = []
+    volm_list = []
+    vols_list = []
+    volt_list = []
+    with open(datapath,"rb") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            t, volm, vols, volt = row
+            t_list.append(t)
+            volm_list.append(volm)
+            vols_list.append(vols)
+            volt_list.append(volt)
 
     fig=Figure()
     ax=fig.add_subplot(111)
@@ -180,12 +201,7 @@ def calc_n(frame):
     return len(pa)+len(pi)
 
 
-@app.route("/_nucleation/<sim_id>")
-def render_nucleation(sim_id):
-    n_type = request.args.get('ntype')
-    frame_low = request.args.get('framelow',type=int)
-    frame_high = request.args.get('framehigh',type=int)
-    frame_interval = request.args.get('frameinterval',type=int)
+def make_nucfile(sim_id,n_type,frame_low,frame_high,frame_interval):
     simulations = db['simulations']
     sim_uuid = uuid.UUID(sim_id)
     simulation = simulations[sim_uuid]
@@ -195,8 +211,7 @@ def render_nucleation(sim_id):
     ps = simulation['particle_seed']
     aseed = 1e-6 * np.pi * ps.r**2
     frame_list = range(frame_low,frame_high+1,frame_interval)
-    t_list = []
-    n_list = []
+    data_list = []
     for frame_id in frame_list:
         t = (frame_id + 1) * p.dt # t start from dt
         frame = frames[frame_id]
@@ -205,11 +220,30 @@ def render_nucleation(sim_id):
             pm = frame['particle_MA']
             am = 1e-6 * np.pi * pm.r**2
             n = n / (am - aseed)
-        t_list.append(t)
-        n_list.append(n)
+        data_list.append((t,n))
+    datafile = sim_id + '-nuc.csv'
+    datapath = TMP_PATH + datafile
+    with open(datapath,'wb') as f:
+        writer = csv.writer(f)
+        writer.writerows(data_list)
+    return datafile
 
-    fig=Figure()
-    ax=fig.add_subplot(111)
+
+@app.route("/_nucleation")
+def render_nucleation():
+    datafile = request.args.get('datafile')
+    datapath = TMP_PATH + datafile
+    t_list = []
+    n_list = []
+    with open(datapath,"rb") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            t, n = row
+            t_list.append(t)
+            n_list.append(n)
+
+    fig = Figure()
+    ax = fig.add_subplot(111)
     ax.plot(t_list,n_list,'o')
 
     canvas = FigureCanvas(fig)

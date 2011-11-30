@@ -16,6 +16,7 @@ from .ngzodb import execute_simulation,cancel_simulation
 from .ngutil import FormParam, now2str
 from .ngplot import render_simulation_frame,render_psd,calc_volume,calc_n
 from .ngplot import render_volume,render_nucleation
+from .ngplot import make_nucfile,make_volfile
 
 @app.route('/',methods=['GET','POST'])
 def index():
@@ -421,12 +422,10 @@ def simulation_volume_feed():
     frame_high = request.args.get("framehigh",frame_max,type=int)
     frame_interval = request.args.get("frameinterval",1,type=int)
 
+    datafile = make_volfile(sim_id,frame_low,frame_high,frame_interval)
     return jsonify(imgsrc=url_for("render_volume",
-                                  sim_id=sim_id,
-                                  framelow=frame_low,
-                                  framehigh=frame_high,
-                                  frameinterval=frame_interval
-                                  )
+                                  datafile=datafile),
+                   datahref=url_for("static",filename="tmp/"+datafile)
                   )
 
 
@@ -466,11 +465,9 @@ def simulation_nucleation_feed():
     frame_high = request.args.get("framehigh",frame_max,type=int)
     frame_interval = request.args.get("frameinterval",1,type=int)
 
+    datafile = make_nucfile(sim_id,n_type,
+                            frame_low,frame_high,frame_interval)
     return jsonify(imgsrc=url_for("render_nucleation",
-                                  sim_id=sim_id,
-                                  ntype=n_type,
-                                  framelow=frame_low,
-                                  framehigh=frame_high,
-                                  frameinterval=frame_interval
-                                  )
+                                  datafile=datafile),
+                   datahref=url_for("static",filename="tmp/"+datafile)
                   )

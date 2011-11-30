@@ -129,6 +129,7 @@
                     }, 
                     function(data){
                         $('#simvolimg').attr("src",data.imgsrc);
+                        $('#voldata').attr("href",data.datahref);
                     });
         }
         function simnuc(){
@@ -144,6 +145,7 @@
                     }, 
                     function(data){
                         $('#simnimg').attr("src",data.imgsrc);
+                        $('#nucdata').attr("href",data.datahref);
                     });
         }
         $('#simvol').button();
@@ -215,10 +217,9 @@
   </p>
   <div id="slidersim"></div>
   <p>
-    <label for="downvol">Download data source V(t):</label>
-    <a id="downvol" href="#"></a>
-    <label for="downnuc">Download data source N(t):</label>
-    <a id="downnuc" href="#"></a>
+    <label for="downvol">Download data source:</label>
+    <a id="voldata" href="#">V(t)</a>
+    <a id="nucdata" href="#">N(t)</a>
   </p>
   <button id="simall">Calculate All</button>
   <button id="simvol">V(t)</button>
