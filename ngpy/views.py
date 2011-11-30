@@ -89,13 +89,14 @@ def new_simulation(sim_id=None):
                      # authentication
         name = form.name.data
         group = form.group.data
+        sim_id = setup_simulation(db,params,name,owner,group)
         if form.mode.data:
             # batch_var is in
             # (lx,Lx,dt,max_t,k_MA,nu_MA,k_SM,nu_SM,n_SM,r_seed,r_seed)
             batch_var = form.batchvar.data
             batch_step = form.batchstep.data
             batch_max = form.batchmax.data + batch_step
-            batch_min = form.batchmin.data
+            batch_min = form.batchmin.data + batch_step
             for val in np.arange(batch_min,batch_max,batch_step):
                 params.setval(batch_var,val)
                 sim_id = setup_simulation(db,params,name,owner,group)

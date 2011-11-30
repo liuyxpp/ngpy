@@ -85,13 +85,19 @@ def ngrun(zodb_URI,sim_id):
               dn * p.r0_SM * p.r0_SM / (2 * particle_MA.r))
         particle_MA.grow_by_dr(dr)
 
-        particle_SM_growth(t,particle_SM_active,particle_seed,
+        particle_SM_growth(t,particle_MA,particle_seed,
                            particle_SM_active,particle_SM_inactive)
 
+        pa_list = IOBTree.IOBTree()
+        pi_list = IOBTree.IOBTree()
+        for i in range(len(particle_SM_active)):
+            pa_list[i] = copy.deepcopy(particle_SM_active[i])
+        for i in range(len(particle_SM_inactive)):
+            pi_list[i] = copy.deepcopy(particle_SM_inactive[i])
         frame = PersistentMapping({
             'particle_MA':copy.deepcopy(particle_MA),
-            'particle_SM_active':PersistentList(particle_SM_active),
-            'particle_SM_inactive':PersistentList(particle_SM_inactive)
+            'particle_SM_active':pa_list,
+            'particle_SM_inactive':pi_list
             })
         try:
             frames[index] = frame

@@ -60,7 +60,9 @@
                     frame:frame_id,
                     }, 
                     function(data){
-                        $('#curvolres').text('Volume of metastable phase: '+data.volm+' stable phase: '+data.vols+ ' total: '+data.volt);
+                        $('#curvolmres').val(data.volm);
+                        $('#curvolsres').val(data.vols);
+                        $('#curvoltres').val(data.volt);
                     });
         }
         function nuc(){
@@ -70,7 +72,7 @@
                     frame:frame_id,
                     }, 
                     function(data){
-                        $('#curnres').text('Number of nucleation events: '+data.n);
+                        $('#curnres').val(data.n);
                     });
         }
         $('#curpsd').button();
@@ -180,8 +182,22 @@
   <img id="liveimg" src="" alt="loading..." /> 
   <h3>Analyze Current Frame</h3>
   <img id="curpsdimg" src="" alt="PSD image to be calculated..." /> 
-  <div id="curvolres">Volume of metastable phase: stable phase: total: </div>
-  <div id="curnres">Number of nucleation events: </div>
+  <p>
+    <label for="curvolmres">Volume of metastable phase:</label>
+    <input type="text" id="curvolmres" style="border:0;color:#f6931f;font-weight:bold;">
+  </p>
+  <p>
+    <label for="curvolsres">Volume of stable phase:</label>
+    <input type="text" id="curvolsres" style="border:0;color:#f6931f;font-weight:bold;">
+  </p>
+  <p>
+    <label for="curvoltres">Total volume:</label>
+    <input type="text" id="curvoltres" style="border:0;color:#f6931f;font-weight:bold;">
+  </p>
+  <p>
+    <label for="curnres">Number of nucleation events:</label>
+    <input type="text" id="curnres" style="border:0;color:#f6931f;font-weight:bold;">
+  </p>
   <button id="curall">Calculate All</button>
   <button id="curpsd">PSD</button>
   <button id="curvol">Volume</button>
@@ -198,7 +214,12 @@
     <input type="text" id="framerange" style="border:0;color:#f6931f;font-weight:bold;">
   </p>
   <div id="slidersim"></div>
-  <div><p></p></div>
+  <p>
+    <label for="downvol">Download data source V(t):</label>
+    <a id="downvol" href="#"></a>
+    <label for="downnuc">Download data source N(t):</label>
+    <a id="downnuc" href="#"></a>
+  </p>
   <button id="simall">Calculate All</button>
   <button id="simvol">V(t)</button>
   <button id="simn">N(t)</button>

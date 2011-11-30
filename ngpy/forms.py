@@ -28,8 +28,9 @@ class NewSimulationForm(Form):
     mode = BooleanField(u'Bactch mode')
     batchvar = SelectField(u'Batch variable',choices=CHANGEABLE_SIM_PARAM)
     batchmin = FloatField(u'Batch min')
-    batchstep = FloatField(u'Batch step')
-    batchmax = FloatField(u'Batch max')
+    # set default value to pass validation
+    batchstep = FloatField(u'Batch step',default=0)
+    batchmax = FloatField(u'Batch max',default=0)
     name = TextField(u'Name',[Length(max=128)])
     group = SelectField(u'Group')
     lx = FloatField(u'lx',[Required(),NumberRange(1e3,1e6)])

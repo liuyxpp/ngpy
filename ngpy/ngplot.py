@@ -53,10 +53,10 @@ def render_simulation_frame(sim_id):
     number_active_max = (GRAY_INACTIVE -  GRAY_ACTIVE_BASE) / GRAY_ACTIVE_STEP
     pm.draw_on_lattice(GRAY_M,p.lx,p.ly,lattice)
     ps.draw_on_lattice(GRAY_SEED,p.lx,p.ly,lattice)
-    for i,particle in enumerate(pa):
+    for i,particle in pa.iteritems():
         particle.draw_on_lattice(i*GRAY_ACTIVE_STEP+GRAY_ACTIVE_BASE,
                           p.lx,p.ly,lattice)
-    for i,particle in enumerate(pi):
+    for i,particle in pi.iteritems():
         particle.draw_on_lattice(GRAY_INACTIVE,p.lx,p.ly,lattice)
 
     fig=Figure()
@@ -91,10 +91,10 @@ def render_psd(sim_id):
     pa = frame['particle_SM_active']
     pi = frame['particle_SM_inactive']
     diameters = []
-    for ipa in pa:
+    for ipa in pa.values():
         if 2 * ipa.r > 0:
             diameters.append(2*ipa.r)
-    for ipi in pi:
+    for ipi in pi.values():
         if 2 * ipi.r >0:
             diameters.append(2*ipi.r)
 
@@ -123,7 +123,7 @@ def calc_volume(frame,ps):
     pa = frame['particle_SM_active']
     pi = frame['particle_SM_inactive']
 
-    area_M = 1e-6 * calc_area_M(pm,ps,pa,pi)
+    area_M = 1e-6 * calc_area_M(pm,ps,pa.values(),pi.values())
     area_MA = 1e-6 * np.pi * pm.r**2
     area_seed = 1e-6 * np.pi * ps.r**2
     area_SM = area_MA - area_seed - area_M
