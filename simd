@@ -28,6 +28,9 @@ def queue_daemon(redis,qkey):
                 ngabort(zodb_uri,sim_id)
                 del jobs[sim_id]
                 print "ABORT: %s" % sim_id
+            else:
+                # push back the msg in case there are other simd instances.
+                redis.rpush(msg)
 
 
 if __name__ == '__main__':

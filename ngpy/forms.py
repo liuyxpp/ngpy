@@ -16,12 +16,18 @@ import datetime
 from flaskext.wtf import Form,Required,Optional,NumberRange,Length
 from flaskext.wtf import IntegerField,FloatField
 from flaskext.wtf import SelectField,TextField,BooleanField
-from flaskext.wtf import DateTimeField
+from flaskext.wtf import DateTimeField,TextAreaField
 
 from .ngzodb import CHANGEABLE_SIM_PARAM, SIMULATION_STATUS
 
 class SelectSimulationForm(Form):
     simulations = SelectField(u'Simulations') #,coerce=uuid.UUID)
+
+
+class NewGroupForm(Form):
+    name = TextField(u'Name',[Length(max=128)])
+    batchvar = SelectField(u'Batch variable',choices=CHANGEABLE_SIM_PARAM)
+    description = TextAreaField(u'Description',[Length(max=4096)])
 
 
 class NewSimulationForm(Form):

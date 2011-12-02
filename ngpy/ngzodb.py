@@ -72,13 +72,35 @@ def create_zodb(zodb_URI):
         db['simulations'] = OOBTree.OOBTree()
     if not db.has_key('sim_groups'):
         db['sim_groups'] = OOBTree.OOBTree()
+    transaction.commit()
     # setup predefined groups
     groups = db['sim_groups']
-    groups['test'] = 'Simulation group for testing'
-    groups['std'] = 'A standard simulation group'
-    db['sim_groups'] = groups
-    transaction.commit()
+    setup_group(db,'TEST','lyx',None,'Simulation group for testing')
+    setup_group(db,'STANDARD','lyx',None,'A standard simulation group')
 
+
+def setup_group(db,name,owner,batchvar,description=''):
+    groups = db['sim_groups']
+    if groups.has_key(name):
+            return False
+    group = PersistentMapping({
+        'owner':owner,
+        'batchvar':batchvar,
+        'description':description
+        })
+    groups[name] = group
+    db['sim_groups']=groups
+    transaction.commit()
+    return True
+
+
+def update_group(db,name,batchvar):
+    groups = db['sim_groups']
+    if groups.has_key(name):
+        group = groups[name]
+        group['batchvar'] = batchvar
+        db['sim_groups']=groups
+        transaction.commit()
 
 def setup_simulation(db,params,name='',owner='',group='test'):
     sim_id = uuid.uuid4()
@@ -127,6 +149,26 @@ def del_simulation(db,sim_id):
             transaction.commit()
 
 
+def find_simulations_by_group(db,gname,is_sort=False,is_reverse=False):
+    groups = db['sim_groups']
+    if not groups.has_key(gname):
+        return None
+    group = groups[gname]
+    batchvar = group['batchvar']
+    group_simulations = []
+    simulations = db['simulations']
+    for sim_uuid in simulations.keys():
+        simulation = simulations[sim_uuid]
+        if simulation['group'] == gname:
+            group_simulations.append((str(sim_uuid),simulation))
+    if is_sort:
+        group_simulations.sort(
+            key=lambda x:getattr(x[1]['parameter'],batchvar),
+            reverse=is_reverse)
+    return group_simulations
+
+
+# TODO: Add sort fuctionality
 def find_simulations(db,form):
     results = []
     simulations = db['simulations']

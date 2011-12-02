@@ -1,5 +1,6 @@
 import uuid
 from pickle import dumps
+from time import time
 
 from flask import make_response, render_template
 from flask import request, redirect, url_for
@@ -9,18 +10,21 @@ from ngpy import app, db, redis
 import numpy as np
 
 from .forms import NewSimulationForm, SelectSimulationForm
-from .forms import SearchSimulationForm
+from .forms import SearchSimulationForm,NewGroupForm
 from .ngzodb import setup_simulation, update_simulation, del_simulation
-from .ngzodb import find_simulations
+from .ngzodb import find_simulations,setup_group,update_group
+from .ngzodb import find_simulations_by_group
 from .ngzodb import execute_simulation,cancel_simulation
 from .ngutil import FormParam, now2str
 from .ngplot import render_simulation_frame,render_psd,calc_volume,calc_n
 from .ngplot import render_volume,render_nucleation
-from .ngplot import make_nucfile,make_volfile
+from .ngplot import render_group_nucleation
+from .ngplot import make_nucfile,make_volfile,archive_group_data
 
 @app.route('/',methods=['GET','POST'])
 def index():
     simulations = db['simulations']
+    groups = db['sim_groups']
     new_simulations = []
     active_simulations = []
     finish_simulations = []
@@ -37,6 +41,7 @@ def index():
             abort_simulations.append((str(k),simulation))
     return render_template(
         'index.html',
+        groups = groups,
         new_simulations=new_simulations,
         active_simulations=active_simulations,
         finish_simulations=finish_simulations,
@@ -68,6 +73,114 @@ def simple(sim_id):
     response.headers['Content-Type'] = 'image/png'
     return response
 
+@app.route("/creategroup/",methods=['GET','POST'])
+def new_group():
+    form = NewGroupForm(request.form)
+    if request.method == 'POST' and form.validate():
+        name = form.name.data
+        owner = 'lyx'
+        batchvar = form.batchvar.data
+        description = form.description.data
+        res = setup_group(db,name,owner,batchvar,description)
+        if not res:
+            return redirect(url_for('error',
+                                    message='The group '+name+'exsits'))
+        return redirect(url_for('index'))
+    else:
+        return render_template('newgroup.html',form=form)
+
+
+@app.route("/group/",methods=['GET','POST'])
+@app.route("/group/<gname>",methods=['GET','POST'])
+def view_group():
+    if request.method == 'POST':
+        gname = request.form['groups']
+    else:
+        gname = request.args.get('groups')
+    groups = db['sim_groups']
+    if not groups.has_key(gname):
+        return redirect(url_for("error",message="No group "+gname))
+    group = groups[gname]
+    batchvar = group['batchvar']
+    group_simulations = find_simulations_by_group(db,gname,True)
+    # find the max available frame number
+    skey,s0 = group_simulations[0]
+    frame_max = len(s0['frames']) - 1
+    for sim_uuid,simulation in group_simulations:
+        frame_num = len(simulation['frames']) -1
+        if frame_num < frame_max:
+            frame_max = frame_num
+    return render_template("group.html",
+                           gname=gname,group=group,
+                           batchvar=batchvar,
+                           frame_max=frame_max,
+                           number_simulations=len(group_simulations),
+                           group_simulations=group_simulations
+                          )
+
+
+@app.route("/_groupfeed",methods=['GET','POST'])
+def group_analysis_feed():
+    gname = request.form['gname']
+    batchvar = request.form['batchvar']
+    sim_list = request.form['simlist']
+    psdcheck = int(request.form['psdcheck']) # bool(u'0') is True! use int
+    volmcheck = int(request.form['volmcheck'])
+    volscheck = int(request.form['volscheck'])
+    voltcheck = int(request.form['voltcheck'])
+    ncheck = int(request.form['ncheck'])
+    n_type = request.form['ntype']
+    frame_low = int(request.form['framelow'])
+    frame_high = int(request.form['framehigh'])
+    frame_interval = int(request.form['frameinterval'])
+    user = 'lyx'
+    qkey = user+':'+gname+':simulations'
+    redis.set(qkey,sim_list)
+    for sim_id in sim_list.split(","):
+        if volmcheck or volscheck or voltcheck:
+            volfile = make_volfile(sim_id,
+                                   frame_low,frame_high,frame_interval)
+        if ncheck:
+            nucfile = make_nucfile(sim_id,n_type,
+                                   frame_low,frame_high,frame_interval)
+    volmsrc = ""
+    volssrc = ""
+    voltsrc = ""
+    nsrc = ""
+    if volmcheck:
+        # add timestamp to enforce refreshing image
+        volmsrc = url_for("render_group_volume",
+                          voltype = 'volm',
+                          qkey=qkey,batchvar=batchvar,t=str(time()))
+    if volscheck:
+        # add timestamp to enforce refreshing image
+        volssrc = url_for("render_group_volume",
+                          voltype = 'vols',
+                          qkey=qkey,batchvar=batchvar,t=str(time()))
+    if voltcheck:
+        # add timestamp to enforce refreshing image
+        voltsrc = url_for("render_group_volume",
+                          voltype = 'volt',
+                          qkey=qkey,batchvar=batchvar,t=str(time()))
+    if ncheck:
+        # add timestamp to enforce refreshing image
+        nsrc = url_for("render_group_nucleation",
+                       qkey=qkey,batchvar=batchvar,t=str(time()))
+    datahref = "#"
+    datatext = "At least select one term to analyze"
+    if psdcheck or volmcheck or volscheck or voltcheck or ncheck:
+        datatext = archive_group_data(gname,batchvar,sim_list,
+                                      psdcheck,volmcheck,
+                                      volscheck,voltcheck,ncheck)
+        datahref = url_for("static",filename="tmp/"+datatext)
+    return jsonify(volmsrc=volmsrc,
+                   volssrc=volssrc,
+                   voltsrc=voltsrc,
+                   nsrc=nsrc,
+                   datahref=datahref,
+                   datatext=datatext
+                  )
+
 
 @app.route("/create/",methods=['Get','POST'])
 @app.route("/create/<sim_id>",methods=['Get','POST'])
@@ -95,6 +208,7 @@ def new_simulation(sim_id=None):
             # batch_var is in
             # (lx,Lx,dt,max_t,k_MA,nu_MA,k_SM,nu_SM,n_SM,r_seed,r_seed)
             batch_var = form.batchvar.data
+            update_group(db,group,batch_var)
             batch_step = form.batchstep.data
             batch_max = form.batchmax.data + batch_step
             batch_min = form.batchmin.data + batch_step
@@ -106,6 +220,7 @@ def new_simulation(sim_id=None):
         if params is not None:
             form.group.data = simulation['group']
         return render_template('new.html',form=form)
+
 
 @app.route('/view/<sim_id>',methods=['GET','POST'])
 def view_simulation(sim_id):
@@ -362,8 +477,6 @@ def search_simulation():
         form.group.data = 'all'
         form.status.data = 'all'
         return render_template('search.html',form=form)
-
-
 
 
 @app.route("/_psdfeed",methods=['GET','POST'])

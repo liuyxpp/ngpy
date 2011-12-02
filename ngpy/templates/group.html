@@ -1,0 +1,149 @@
+{% extends "layout.html" %}
+{% from "_parameters.html" import render_parameters %}
+{% from "_listhelpers.html" import render_list %}
+{% block title %}Group Details and Analysis{% endblock %}
+{% block ajax %}
+<script type=text/javascript>
+    $(function() {
+        var frame_max = $('#framemax').val();
+        $('#simulations .selectAll').click(function(event){
+            event.preventDefault();
+            $(this).siblings('#simulations input:checkbox').attr('checked','checked');
+        });
+        $('#simulations .deselectAll').click(function(event){
+            event.preventDefault();
+            $(this).siblings('#simulations input:checkbox').removeAttr('checked');
+        });
+        var spinnersim = $('#spinnersim').spinner({
+            spin:function(event,ui){
+                var fid = ui.value;
+                if(fid>frame_max){
+                    $(this).spinner("value",1);
+                    return false;
+                }
+                else if(fid<1){
+                    $(this).spinner("value",frame_max);
+                    return false;
+                }
+            }
+        });
+        $('#spinnersim').val(1);
+        var slidersim = $('#slidersim').slider({
+            range:true,
+            min:0,
+            max:frame_max,
+            values:[0,frame_max],
+            slide:function(event,ui){
+                    $("#framerange").val(ui.values[0]+"-"+ui.values[1]);
+            }
+        });
+        $("#framerange").val(slidersim.slider("values",0)+"-"+slidersim.slider("values",1));
+        function analyze(){
+            var frame_low = slidersim.slider("values",0);
+            var frame_high = slidersim.slider("values",1);
+            var frame_interval = $('#spinnersim').val();
+            var sim_list = [];
+            $('#simulations input:checkbox').each(function(i){
+                if(this.checked){
+                    sim_list.push($(this).val());
+                }
+            });
+            $.post($SCRIPT_ROOT+'/_groupfeed',{
+                    gname:$('#gname').val(),
+                    batchvar:$('#batchvar').val(),
+                    simlist:sim_list.join(","),
+                    psdcheck:$('#psdcheck:checked').length,
+                    volmcheck:$('#volmcheck:checked').length,
+                    volscheck:$('#volscheck:checked').length,
+                    voltcheck:$('#voltcheck:checked').length,
+                    ncheck:$('#ncheck:checked').length,
+                    ntype:'density',
+                    framelow:frame_low,
+                    framehigh:frame_high,
+                    frameinterval:frame_interval
+                    }, 
+                    function(data){
+                        $('#volmimg').attr("src",data.volmsrc);
+                        $('#volsimg').attr("src",data.volssrc);
+                        $('#voltimg').attr("src",data.voltsrc);
+                        $('#nimg').attr("src",data.nsrc);
+                        $('#data').attr("href",data.datahref).text(data.datatext);
+                        },
+                        "json"
+                    );
+        }
+        $('#analyze').button();
+        $('#analyze').click(function(){
+            $('#volmimg').removeAttr("src");
+            $('#volsimg').removeAttr("src","");
+            $('#voltimg').removeAttr("src","");
+            $('#nimg').removeAttr("src","");
+            $('#data').attr("href","#").text("Data to be calculated");
+            analyze();
+        });
+        $.ajaxSetup( {cache:false} );
+    });
+</script>
+{% endblock %}
+{% block body %}
+  <h2>Group Information and Analysis</h2>
+  <h3>Group {{ gname }}</h3>
+    <div>Name: {{ gname }}</div>
+    <div>Owner: {{ group["owner"] }}</div>
+    <div>batchvar: {{ batchvar }}</div>
+    <div>Description: {{ group["description"] }}</div>
+    <div>Number of simulations: {{ number_simulations }}</div>
+    <input id=gname type=hidden value={{ gname }} />
+    <input id=batchvar type=hidden value={{ batchvar }} />
+    <input id=framemax type=hidden value={{ frame_max }} />
+
+  <h3>Analyze Group</h3>
+    <fieldset id="simulations">
+      <legend>Choose Simulations to Analyze</legend>
+      <a class="selectAll" href="#">Select All</a>
+      <a class="deselectAll" href="#">Deselect All</a>
+      {% for (sim_id,simulation) in group_simulations %}
+        <br />
+        <input name="simulations" id={{ sim_id }} type="checkbox" value={{ sim_id }}>
+        <label for={{ sim_id }}>{{ simulation['parameter'][batchvar] }} <a href={{ url_for('view_simulation',sim_id=sim_id) }}>{{ sim_id }}</a></label>
+      {% endfor %}
+    </fieldset>
+
+    <h4>Simulation Settings</h4>
+    <span>Select an interval</span>
+    <input id="spinnersim" name="value" />
+    <p>
+      <label for="framerange">Frame range:</label>
+      <input type="text" id="framerange" style="border:0;color:#f6931f;font-weight:bold;">
+    </p>
+    <div id="slidersim"></div>
+
+    <h4>Following analysis will be included</h4>
+    <input name="analysis" id="psdcheck" type="checkbox" value="psd">
+    <label for="psd">PSD</label>
+    <input name="analysis" id="volmcheck" type="checkbox" value="volm">
+    <label for="volmcheck">Vm(t)</label>
+    <input name="analysis" id="volscheck" type="checkbox" value="vols">
+    <label for="volscheck">Vs(t)</label>
+    <input name="analysis" id="voltcheck" type="checkbox" value="volt">
+    <label for="voltcheck">Vt(t)</label>
+    <input name="analysis" id="ncheck" type="checkbox" value="nuc">
+    <label for="ncheck">N(t)</label>
+
+    <h4>Results</h4>
+    <img id="volmimg" src="" alt="Vm(t) to be calculated..." />
+    <br />
+    <img id="volsimg" src="" alt="Vs(t) to be calculated..." />
+    <br />
+    <img id="voltimg" src="" alt="Vt(t) to be calculated..." />
+    <br />
+    <img id="nimg" src="" alt="N(t) to be calculated..." />
+    <br />
+    <p>
+      <label for="downvol">Download data source:</label>
+      <a id="data" href="#">Data to be calculated</a>
+    </p>
+    <button id="analyze">Analyze</button>
+
+  {% if error %}<div class=error><strong>Error:</strong> {{ error }}</div>{% endif %}
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% from "_formhelpers.html" import render_field %}
+{% block title %}Create A Group{% endblock %}
+{% block body %}
+  <h2>Create A Group</h2>
+  <form action="" method="POST">
+    <dl>
+        {{ form.csrf() }}
+        {{ render_field(form.name) }}
+        {{ render_field(form.batchvar) }}
+        {{ render_field(form.description) }}
+    </dl>
+    <div class=actions><input type=submit value="Create"></div>
+  </form>
+{% endblock %}
+

@@ -3,8 +3,18 @@
 {% block title %}Home{% endblock %}
 {% block body %}
   {% if error %}<div class=error><strong>Error:</strong> {{ error }}</div>{% endif %}
-  {{ render_list("New Simulations",new_simulations,is_new=True) }}
+  <h2>Groups</h2>
+  <form action={{ url_for("view_group") }}>
+    <select id="groups" name="groups">
+        {% for gname in groups.keys() %}
+          <option value={{ gname }}>{{ gname }}</option>
+        {% endfor %}
+    </select>
+    <input type="submit" value="Analyze" >
+  </form>
+  <br />
   {{ render_list("Current Acitive Simulations",active_simulations) }}
+  {{ render_list("New Simulations",new_simulations,is_new=True) }}
   {{ render_list("Finished Simulations",finish_simulations) }}
   {{ render_list("Aborted Simulations",abort_simulations) }}
 {% endblock %}

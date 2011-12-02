@@ -70,6 +70,7 @@
         {{ form.csrf() }}
         {{ render_field(form.mode) }}
         <fieldset id='batch' style='display:none'>
+        <legend>Batch Settings</legend>
         {{ render_field(form.batchvar) }}
         {{ render_field(form.batchmin,readonly='readonly') }}
         {{ render_field(form.batchstep) }}
@@ -77,7 +78,9 @@
         </fieldset>
         {{ render_field(form.name) }}
         {{ render_field(form.group) }}
+        <span>Or you can <a href="{{ url_for('new_group') }}">Create a new group</a></span>
         <fieldset id='param'>
+        <legend>Parmeters</legend>
         {{ render_field(form.lx) }}
         {{ render_field(form.ly,readonly='readonly') }}
         {{ render_field(form.Lx) }}

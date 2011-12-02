@@ -11,6 +11,7 @@
 """
 import os
 import csv
+import tarfile
 import uuid
 
 import numpy as np
@@ -20,7 +21,7 @@ import matplotlib.cm as colormap
 import StringIO
 
 from flask import request, make_response
-from ngpy import app,db
+from ngpy import app,db,redis
 
 from .ngofflattice_kooi import calc_area_M
 
@@ -194,6 +195,44 @@ def render_volume():
     return response
 
 
+@app.route("/_group_volume")
+def render_group_volume():
+    vol_type = request.args.get('voltype')
+    qkey = request.args.get('qkey')
+    batchvar = request.args.get('batchvar')
+    fig = Figure()
+    ax = fig.add_subplot(111)
+
+    sim_list = redis.get(qkey)
+    for sim_id in sim_list.split(","):
+        batch_val = get_batch_value(sim_id,batchvar)
+        datapath = TMP_PATH + sim_id + '-vol.csv'
+        t_list = []
+        vol_list = []
+        with open(datapath,"rb") as f:
+            reader = csv.reader(f)
+            for row in reader:
+                t, volm, vols, volt = row
+                t_list.append(t)
+                if vol_type == 'volm':
+                    vol_list.append(volm)
+                elif vol_type == 'vols':
+                    vol_list.append(vols)
+                else:
+                    vol_list.append(volt)
+        label = batchvar + " = " + str(batch_val)
+        ax.plot(t_list,vol_list,label=label)
+
+    handles,labels = ax.get_legend_handles_labels()
+    ax.legend(handles,labels,loc='upper left')
+    canvas = FigureCanvas(fig)
+    png_output = StringIO.StringIO()
+    canvas.print_png(png_output)
+    response = make_response(png_output.getvalue())
+    response.headers['Content-Type'] = 'image/png'
+    return response
+
+
 def calc_n(frame):
     pa = frame['particle_SM_active']
     pi = frame['particle_SM_inactive']
@@ -252,4 +291,143 @@ def render_nucleation():
     response = make_response(png_output.getvalue())
     response.headers['Content-Type'] = 'image/png'
     return response
+
+
+@app.route("/_group_nucleation")
+def render_group_nucleation():
+    qkey = request.args.get('qkey')
+    batchvar = request.args.get('batchvar')
+    fig = Figure()
+    ax = fig.add_subplot(111)
+
+    sim_list = redis.get(qkey)
+    for sim_id in sim_list.split(","):
+        batch_val = get_batch_value(sim_id,batchvar)
+        datapath = TMP_PATH + sim_id + '-nuc.csv'
+        t_list = []
+        n_list = []
+        with open(datapath,"rb") as f:
+            reader = csv.reader(f)
+            for row in reader:
+                t, n = row
+                t_list.append(t)
+                n_list.append(n)
+        label = batchvar + " = " + str(batch_val)
+        ax.plot(t_list,n_list,label=label,marker='o',markeredgewidth=0)
+
+    handles,labels = ax.get_legend_handles_labels()
+    ax.legend(handles,labels,loc='upper left')
+    canvas = FigureCanvas(fig)
+    png_output = StringIO.StringIO()
+    canvas.print_png(png_output)
+    response = make_response(png_output.getvalue())
+    response.headers['Content-Type'] = 'image/png'
+    return response
+
+def get_batch_value(sim_id,batchvar):
+    sim_uuid = uuid.UUID(sim_id)
+    params = db['simulations'][sim_uuid]['parameter']
+    return getattr(params,batchvar)
+
+
+def archive_group_data(gname,batchvar,sim_list,psdcheck,volmcheck,
+                       volscheck,voltcheck,ncheck):
+    batchinfo = gname + "-batch.txt"
+    psdfile = gname + "-psd-" + batchvar + ".csv"
+    volmfile = gname + "-volm-" + batchvar + ".csv"
+    volsfile = gname + "-vols-" + batchvar + ".csv"
+    voltfile = gname + "-volt-" + batchvar + ".csv"
+    nfile = gname + "-N-" + batchvar + ".csv"
+    # datafile is an archive of all above files
+    datafile = gname + "-" + batchvar + ".tar.bz2"
+    volm_group_list = []
+    vols_group_list = []
+    volt_group_list = []
+    n_group_list = []
+    for sim_id in sim_list.split(","):
+        batch_val = get_batch_value(sim_id,batchvar)
+        if volmcheck or volscheck or voltcheck:
+            datapath = TMP_PATH + sim_id + '-vol.csv'
+            with open(datapath,"rb") as f:
+                reader = csv.reader(f)
+                i = 1
+                j = 1
+                k = 1
+                for row in reader:
+                    t, volm, vols, volt = row
+                    if volmcheck:
+                        if len(volm_group_list) < i:
+                            volm_group_list.append([t,volm])
+                        else:
+                            volm_group_list[i-1].append(volm)
+                        i = i + 1
+                    if volscheck:
+                        if len(vols_group_list) < j:
+                            vols_group_list.append([t,vols])
+                        else:
+                            vols_group_list[j-1].append(vols)
+                        j = j + 1
+                    if voltcheck:
+                        if len(volt_group_list) < k:
+                            volt_group_list.append([t,volt])
+                        else:
+                            volt_group_list[k-1].append(volt)
+                        k = k + 1
+        if ncheck:
+            datapath = TMP_PATH + sim_id + '-nuc.csv'
+            with open(datapath,"rb") as f:
+                reader = csv.reader(f)
+                i = 1
+                for row in reader:
+                    t, n = row
+                    if len(n_group_list) < i:
+                        n_group_list.append([t,n])
+                    else:
+                        n_group_list[i-1].append(n)
+                    i = i + 1
+    if volmcheck:
+        with open(TMP_PATH + volmfile,"wb") as f:
+            writer = csv.writer(f)
+            writer.writerows(volm_group_list)
+    if volscheck:
+        with open(TMP_PATH + volsfile,"wb") as f:
+            writer = csv.writer(f)
+            writer.writerows(vols_group_list)
+    if voltcheck:
+        with open(TMP_PATH + voltfile,"wb") as f:
+            writer = csv.writer(f)
+            writer.writerows(volt_group_list)
+    if ncheck:
+        with open(TMP_PATH + nfile,"wb") as f:
+            writer = csv.writer(f)
+            writer.writerows(n_group_list)
+
+    rawname = gname + "-" + batchvar
+    with tarfile.open(TMP_PATH+datafile,"w:bz2") as tar:
+        def resetpsd(tarinfo):
+            tarinfo.name = psdfile
+            return tarinfo
+        def resetvolm(tarinfo):
+            tarinfo.name = volmfile
+            return tarinfo
+        def resetvols(tarinfo):
+            tarinfo.name = volsfile
+            return tarinfo
+        def resetvolt(tarinfo):
+            tarinfo.name = voltfile
+            return tarinfo
+        def resetn(tarinfo):
+            tarinfo.name = nfile
+            return tarinfo
+        if psdcheck:
+            tar.add(TMP_PATH+psdfile,filter=resetpsd)
+        if volmcheck:
+            tar.add(TMP_PATH+volmfile,filter=resetvolm)
+        if volscheck:
+            tar.add(TMP_PATH+volsfile,filter=resetvols)
+        if voltcheck:
+            tar.add(TMP_PATH+voltfile,filter=resetvolt)
+        if ncheck:
+            tar.add(TMP_PATH+nfile,filter=resetn)
+    return datafile
 
