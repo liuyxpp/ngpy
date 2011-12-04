@@ -76,6 +76,18 @@ def render_simulation_frame(sim_id):
     return response
 
 
+def make_psd(frame):
+    pa = frame['particle_SM_active']
+    pi = frame['particle_SM_inactive']
+    diameters = []
+    for ipa in pa.values():
+        if 2 * ipa.r > 0:
+            diameters.append(2*ipa.r)
+    for ipi in pi.values():
+        if 2 * ipi.r >0:
+            diameters.append(2*ipi.r)
+    return diameters
+
 @app.route("/_psd/<sim_id>")
 def render_psd(sim_id):
     psd_type = request.args.get('psdtype')
@@ -92,17 +104,7 @@ def render_psd(sim_id):
         return "Error: simulation " + sim_id + " does not have frame"+str(frame_id)+"."
     frame = frames[frame_id]
 
-    p = simulation['parameter']
-    pa = frame['particle_SM_active']
-    pi = frame['particle_SM_inactive']
-    diameters = []
-    for ipa in pa.values():
-        if 2 * ipa.r > 0:
-            diameters.append(2*ipa.r)
-    for ipi in pi.values():
-        if 2 * ipi.r >0:
-            diameters.append(2*ipi.r)
-
+    diameters = make_psd(frame)
     if diameters:
         bins = np.arange(0,500,20)
         fig=Figure()
@@ -121,6 +123,32 @@ def render_psd(sim_id):
         return response
     else:
         return "Error: simulation " + sim_id + " does not have any particles."
+
+# lastone: make only the last frame PSD
+def make_psdfile(sim_id,frame_low,frame_high,frame_interval,
+                 lastone=True):
+    simulations = db['simulations']
+    sim_uuid = uuid.UUID(sim_id)
+    simulation = simulations[sim_uuid]
+    frames = simulation['frames']
+
+    data_list = []
+    if lastone:
+        diameters = make_psd(frames[frame_high])
+        data_list.append(diameters)
+    else:
+        frame_list = range(frame_low,frame_high+1,frame_interval)
+        i = 1
+        for frame_id in frame_list:
+            diameters = make_psd(frame[frame_id])
+            data_list.append(diameters)
+    datafile = sim_id + '-psd.csv'
+    datapath = TMP_PATH + datafile
+    with open(datapath,'wb') as f:
+        writer = csv.writer(f)
+        # NOTE: each psd-data will be saved as a row other than a column
+        writer.writerows(data_list)
+    return datafile
 
 
 def calc_volume(frame,ps):
@@ -332,7 +360,7 @@ def get_batch_value(sim_id,batchvar):
 
 def archive_group_data(gname,batchvar,sim_list,psdcheck,volmcheck,
                        volscheck,voltcheck,ncheck):
-    batchinfo = gname + "-batch.txt"
+    batchinfo = gname + "-" + batchvar + "-info.txt"
     psdfile = gname + "-psd-" + batchvar + ".csv"
     volmfile = gname + "-volm-" + batchvar + ".csv"
     volsfile = gname + "-vols-" + batchvar + ".csv"
@@ -340,12 +368,18 @@ def archive_group_data(gname,batchvar,sim_list,psdcheck,volmcheck,
     nfile = gname + "-N-" + batchvar + ".csv"
     # datafile is an archive of all above files
     datafile = gname + "-" + batchvar + ".tar.bz2"
+    psd_group_list = []
     volm_group_list = []
     vols_group_list = []
     volt_group_list = []
     n_group_list = []
     for sim_id in sim_list.split(","):
-        batch_val = get_batch_value(sim_id,batchvar)
+        if psdcheck:
+            datapath = TMP_PATH + sim_id + '-psd.csv'
+            with open(datapath,"rb") as f:
+                reader = csv.reader(f)
+                for row in reader:
+                    psd_group_list.append(row)
         if volmcheck or volscheck or voltcheck:
             datapath = TMP_PATH + sim_id + '-vol.csv'
             with open(datapath,"rb") as f:
@@ -385,6 +419,10 @@ def archive_group_data(gname,batchvar,sim_list,psdcheck,volmcheck,
                     else:
                         n_group_list[i-1].append(n)
                     i = i + 1
+    if psdcheck:
+        with open(TMP_PATH + psdfile,"wb") as f:
+            writer = csv.writer(f)
+            writer.writerows(psd_group_list)
     if volmcheck:
         with open(TMP_PATH + volmfile,"wb") as f:
             writer = csv.writer(f)
@@ -402,7 +440,6 @@ def archive_group_data(gname,batchvar,sim_list,psdcheck,volmcheck,
             writer = csv.writer(f)
             writer.writerows(n_group_list)
 
-    rawname = gname + "-" + batchvar
     with tarfile.open(TMP_PATH+datafile,"w:bz2") as tar:
         def resetpsd(tarinfo):
             tarinfo.name = psdfile

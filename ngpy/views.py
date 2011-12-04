@@ -19,7 +19,8 @@ from .ngutil import FormParam, now2str
 from .ngplot import render_simulation_frame,render_psd,calc_volume,calc_n
 from .ngplot import render_volume,render_nucleation
 from .ngplot import render_group_nucleation
-from .ngplot import make_nucfile,make_volfile,archive_group_data
+from .ngplot import make_psdfile,make_nucfile,make_volfile
+from .ngplot import archive_group_data
 
 @app.route('/',methods=['GET','POST'])
 def index():
@@ -137,6 +138,9 @@ def group_analysis_feed():
     qkey = user+':'+gname+':simulations'
     redis.set(qkey,sim_list)
     for sim_id in sim_list.split(","):
+        if psdcheck:
+            psdfile = make_psdfile(sim_id,
+                                   frame_low,frame_high,frame_interval)
         if volmcheck or volscheck or voltcheck:
             volfile = make_volfile(sim_id,
                                    frame_low,frame_high,frame_interval)
