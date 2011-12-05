@@ -24,6 +24,7 @@ from flask import request, make_response
 from ngpy import app,db,redis
 
 from .ngofflattice_kooi import calc_area_M
+from .ngutil import Group,Parameters,GroupInfo
 
 GRAY_M = 63
 GRAY_SEED = 255
@@ -114,6 +115,11 @@ def render_psd(sim_id):
         else:
             ax.hist(diameters,bins)
         ax.axis([-100,500,0,25])
+        ax.set_xlabel('$d$',size='x-large')
+        if psd_type == 'density':
+            ax.set_ylabel('$f(d)/n(t)$',size='x-large')
+        else:
+            ax.set_ylabel('$f(d)$',size='x-large')
 
         canvas = FigureCanvas(fig)
         png_output = StringIO.StringIO()
@@ -211,9 +217,13 @@ def render_volume():
 
     fig=Figure()
     ax=fig.add_subplot(111)
-    ax.plot(t_list,volm_list,'b-')
-    ax.plot(t_list,vols_list,'r-')
-    ax.plot(t_list,volt_list,'g-')
+    ax.plot(t_list,volm_list,'b-',label='$V_m$')
+    ax.plot(t_list,vols_list,'r-',label='$V_s$')
+    ax.plot(t_list,volt_list,'g-',label='$V_t$')
+    handles,labels = ax.get_legend_handles_labels()
+    ax.legend(handles,labels,loc='upper left')
+    ax.set_xlabel('$t$',size='x-large')
+    ax.set_ylabel('$V(t)$',size='x-large')
 
     canvas = FigureCanvas(fig)
     png_output = StringIO.StringIO()
@@ -253,6 +263,13 @@ def render_group_volume():
 
     handles,labels = ax.get_legend_handles_labels()
     ax.legend(handles,labels,loc='upper left')
+    ax.set_xlabel('$t$',size='x-large')
+    if vol_type == 'volm':
+        ax.set_ylabel('$V_m(t)$',size='x-large')
+    elif vol_type == 'vols':
+        ax.set_ylabel('$V_s(t)$',size='x-large')
+    else:
+        ax.set_ylabel('$V_t(t)$',size='x-large')
     canvas = FigureCanvas(fig)
     png_output = StringIO.StringIO()
     canvas.print_png(png_output)
@@ -311,7 +328,9 @@ def render_nucleation():
 
     fig = Figure()
     ax = fig.add_subplot(111)
-    ax.plot(t_list,n_list,'o')
+    ax.plot(t_list,n_list,marker='o',markeredgewidth=0)
+    ax.set_xlabel('$t$',size='x-large')
+    ax.set_ylabel('$n(t)/A(t)$',size='x-large')
 
     canvas = FigureCanvas(fig)
     png_output = StringIO.StringIO()
@@ -345,6 +364,8 @@ def render_group_nucleation():
 
     handles,labels = ax.get_legend_handles_labels()
     ax.legend(handles,labels,loc='upper left')
+    ax.set_xlabel('$t$',size='x-large')
+    ax.set_ylabel('$n(t)/A(t)$',size='x-large')
     canvas = FigureCanvas(fig)
     png_output = StringIO.StringIO()
     canvas.print_png(png_output)
@@ -360,7 +381,7 @@ def get_batch_value(sim_id,batchvar):
 
 def archive_group_data(gname,batchvar,sim_list,psdcheck,volmcheck,
                        volscheck,voltcheck,ncheck):
-    batchinfo = gname + "-" + batchvar + "-info.txt"
+    batchinfo = gname + "-" + batchvar + "-info.ini"
     psdfile = gname + "-psd-" + batchvar + ".csv"
     volmfile = gname + "-volm-" + batchvar + ".csv"
     volsfile = gname + "-vols-" + batchvar + ".csv"
@@ -368,6 +389,20 @@ def archive_group_data(gname,batchvar,sim_list,psdcheck,volmcheck,
     nfile = gname + "-N-" + batchvar + ".csv"
     # datafile is an archive of all above files
     datafile = gname + "-" + batchvar + ".tar.bz2"
+    # .ini file
+    # TODO: ini file should also record the following info:
+    #       1. each batch value
+    #       2. frame_low, frame_high, frame_interval
+    #       3. psdcheck, volmcheck, volscheck, voltcheck, and ncheck
+    description = db['sim_groups'][gname]['description']
+    group_section = Group(gname,batchvar,sim_list,description)
+    simlist = sim_list.split(",")
+    sim_uuid = uuid.UUID(simlist[0])
+    params = db['simulations'][sim_uuid]['parameter']
+    param_section = Parameters(params)
+    group_info = GroupInfo(group_section,param_section)
+    group_info.write(TMP_PATH+batchinfo)
+    # data file
     psd_group_list = []
     volm_group_list = []
     vols_group_list = []
@@ -441,6 +476,9 @@ def archive_group_data(gname,batchvar,sim_list,psdcheck,volmcheck,
             writer.writerows(n_group_list)
 
     with tarfile.open(TMP_PATH+datafile,"w:bz2") as tar:
+        def resetini(tarinfo):
+            tarinfo.name = batchinfo
+            return tarinfo
         def resetpsd(tarinfo):
             tarinfo.name = psdfile
             return tarinfo
@@ -456,6 +494,7 @@ def archive_group_data(gname,batchvar,sim_list,psdcheck,volmcheck,
         def resetn(tarinfo):
             tarinfo.name = nfile
             return tarinfo
+        tar.add(TMP_PATH+batchinfo,filter=resetini)
         if psdcheck:
             tar.add(TMP_PATH+psdfile,filter=resetpsd)
         if volmcheck:

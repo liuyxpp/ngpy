@@ -77,6 +77,7 @@
         }
         $('#curpsd').button();
         $('#curpsd').click(function(){
+            $('#curpsdimg').removeAttr("src");
             psd();
         });
         $('#curvol').button();
@@ -150,15 +151,23 @@
         }
         $('#simvol').button();
         $('#simvol').click(function(){
+            $('#simvolimg').removeAttr("src");
+            $('#voldata').attr("href","#").text("V(t) to be calculated");
             simvol();
         });
         $('#simn').button();
         $('#simn').click(function(){
+            $('#simnimg').removeAttr("src");
+            $('#nucdata').attr("href","#").text("N(t) to be calculated");
             simnuc();
         });
         $('#simall').button();
         $('#simall').click(function(){
+            $('#simvolimg').removeAttr("src");
+            $('#voldata').attr("href","#").text("V(t) to be calculated");
             simvol();
+            $('#simnimg').removeAttr("src");
+            $('#nucdata').attr("href","#").text("N(t) to be calculated");
             simnuc();
         });
         $.ajaxSetup( {cache:false} );

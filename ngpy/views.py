@@ -49,9 +49,11 @@ def index():
         abort_simulations=abort_simulations,
     )
 
+
 @app.route('/error/',methods=['GET','POST'])
 def error():
     return render_template('error.html',message=request.args.get('message'))
+
 
 @app.route("/simple/<sim_id>")
 def simple(sim_id):
@@ -73,6 +75,7 @@ def simple(sim_id):
     response = make_response(png_output.getvalue())
     response.headers['Content-Type'] = 'image/png'
     return response
+
 
 @app.route("/creategroup/",methods=['GET','POST'])
 def new_group():
@@ -500,7 +503,8 @@ def psd_feed():
     return jsonify(imgsrc=url_for("render_psd",
                                   sim_id=sim_id,
                                   frame=frame_id,
-                                  psdtype=psd_type)
+                                  psdtype=psd_type,
+                                  t=str(time()))
                   )
 
 
@@ -541,7 +545,7 @@ def simulation_volume_feed():
 
     datafile = make_volfile(sim_id,frame_low,frame_high,frame_interval)
     return jsonify(imgsrc=url_for("render_volume",
-                                  datafile=datafile),
+                                  datafile=datafile,t=str(time())),
                    datahref=url_for("static",filename="tmp/"+datafile)
                   )
 
@@ -585,6 +589,6 @@ def simulation_nucleation_feed():
     datafile = make_nucfile(sim_id,n_type,
                             frame_low,frame_high,frame_interval)
     return jsonify(imgsrc=url_for("render_nucleation",
-                                  datafile=datafile),
+                                  datafile=datafile,t=str(time())),
                    datahref=url_for("static",filename="tmp/"+datafile)
                   )
