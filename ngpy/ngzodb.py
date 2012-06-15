@@ -6,6 +6,10 @@
 
     ngrun.py is a python module which contains ZODB related classes and helpler functions
 
+    TODO: Currently the storage of particles in ZODB is inefficient.
+          1. Rewrite the Particle object?
+          2. Use another database?
+
     :copyright: (c) 2011 by Yi-Xin Liu (liuyxpp@gmail.com).
     :license: BSD, see LICENSE for more details.
 """

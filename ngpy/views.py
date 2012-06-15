@@ -109,15 +109,20 @@ def view_group():
     group_simulations = find_simulations_by_group(db,gname,True)
     # find the max available frame number
     skey,s0 = group_simulations[0]
-    frame_max = len(s0['frames']) - 1
-    for sim_uuid,simulation in group_simulations:
-        frame_num = len(simulation['frames']) -1
-        if frame_num < frame_max:
-            frame_max = frame_num
+    dt = s0['parameter'].dt
+    max_t = s0['parameter'].max_t
+    frame_max = int(round(max_t/dt)) - 1
+    # number of frames for each simulation
+    frame_list = {}
+    for (sim_id,s0) in group_simulations:
+        sim_uuid = uuid.UUID(sim_id)
+        simulation = db['simulations'][sim_uuid]
+        frame_list[sim_id] = len(simulation['frames']) - 1
     return render_template("group.html",
                            gname=gname,group=group,
                            batchvar=batchvar,
                            frame_max=frame_max,
+                           framelist = frame_list,
                            number_simulations=len(group_simulations),
                            group_simulations=group_simulations
                           )
@@ -137,6 +142,13 @@ def group_analysis_feed():
     frame_low = int(request.form['framelow'])
     frame_high = int(request.form['framehigh'])
     frame_interval = int(request.form['frameinterval'])
+    # find the actual frame_high
+    for sim_id in sim_list.split(","):
+        sim_uuid = uuid.UUID(sim_id)
+        simulation = db['simulations'][sim_uuid]
+        frame_cur = len(simulation['frames']) -1
+        if frame_cur < frame_high:
+            frame_high = frame_cur
     user = 'lyx'
     qkey = user+':'+gname+':simulations'
     redis.set(qkey,sim_list)

@@ -105,7 +105,7 @@
       {% for (sim_id,simulation) in group_simulations %}
         <br />
         <input name="simulations" id={{ sim_id }} type="checkbox" value={{ sim_id }}>
-        <label for={{ sim_id }}>{{ simulation['parameter'][batchvar] }} <a href={{ url_for('view_simulation',sim_id=sim_id) }}>{{ sim_id }}</a></label>
+        <label for={{ sim_id }}>{{ simulation['parameter'][batchvar] }} <a href={{ url_for('view_simulation',sim_id=sim_id) }}>{{ sim_id }}</a> [{{ framelist[sim_id] }}]</label>
       {% endfor %}
     </fieldset>
 

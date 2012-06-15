@@ -46,7 +46,7 @@ or
 
 ::
 
-    $ simd
+    $ simd [-r <server>] [-q <qkey>]
 
 5. Start ngpy
 -------------

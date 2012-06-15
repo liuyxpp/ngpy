@@ -248,20 +248,30 @@ def run(args):
                                  particle_SM_active,particle_SM_inactive)
         N = len(particle_SM_active) + len(particle_SM_inactive)
         print "Nucleation event (total): ",dn," (",N,")"
-        if dn > 0 and particle_MA.r - r_seed > r_test:
+        if dn > 0 and particle_MA.r - r_seed > 2 * r_test:
             particle_SM_nucleation(t,dn,r_test,
                                    r0_SM,k_SM,nu_SM,
                                    particle_MA,particle_seed,
                                    particle_SM_active,particle_SM_inactive)
 
+        # the growth of MA is independent of the growth of SM.
+        #dr=k_MA*dt 
+
         rr=0.0
         for p in particle_SM_active:
             rr += p.r
         rr *= k_SM
-        #dr=(k_MA/2/np.pi-rr)*dt/particle_MA.r - dn*r0_SM*r0_SM/particle_MA.r # the supply of material is a constant (independent of the radius of MA)
+
+        # the supply of material is a constant 
+        # (independent of the radius of MA)
+        #dr = ((k_MA/2/np.pi-rr)*dt/particle_MA.r - 
+        #      dn*r0_SM*r0_SM/particle_MA.r)
+
+        # the supply of material is proportial to the radius of MA
         dr = (k_MA * dt - rr * dt / particle_MA.r -
-              dn * r0_SM * r0_SM / (2 * particle_MA.r)) # the supply of material is proportial to the radius of MA
-        #dr=k_MA*dt # the growth of MA is independent of the growth of SM.
+              dn * r0_SM * r0_SM / (2 * particle_MA.r))
+
+
         particle_MA.grow_by_dr(dr)
 
         particle_SM_growth(t,particle_MA,particle_seed,

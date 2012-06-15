@@ -217,8 +217,8 @@ def render_volume():
 
     fig=Figure()
     ax=fig.add_subplot(111)
-    ax.plot(t_list,volm_list,'b-',label='$V_m$')
-    ax.plot(t_list,vols_list,'r-',label='$V_s$')
+    ax.plot(t_list,volm_list,'b-',label='$V(1)$')
+    ax.plot(t_list,vols_list,'r-',label='$V(0)$')
     ax.plot(t_list,volt_list,'g-',label='$V_t$')
     handles,labels = ax.get_legend_handles_labels()
     ax.legend(handles,labels,loc='upper left')
@@ -265,11 +265,11 @@ def render_group_volume():
     ax.legend(handles,labels,loc='upper left')
     ax.set_xlabel('$t$',size='x-large')
     if vol_type == 'volm':
-        ax.set_ylabel('$V_m(t)$',size='x-large')
+        ax.set_ylabel('$V(1)$',size='x-large')
     elif vol_type == 'vols':
-        ax.set_ylabel('$V_s(t)$',size='x-large')
+        ax.set_ylabel('$V(0)$',size='x-large')
     else:
-        ax.set_ylabel('$V_t(t)$',size='x-large')
+        ax.set_ylabel('$V_t$',size='x-large')
     canvas = FigureCanvas(fig)
     png_output = StringIO.StringIO()
     canvas.print_png(png_output)

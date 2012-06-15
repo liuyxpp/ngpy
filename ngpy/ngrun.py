@@ -72,7 +72,7 @@ def ngrun(zodb_URI,sim_id):
                                  particle_MA,particle_seed,
                                  particle_SM_active,particle_SM_inactive)
         N = len(particle_SM_active) + len(particle_SM_inactive)
-        if dn > 0 and particle_MA.r - p.r_seed > p.r_test:
+        if dn > 0 and particle_MA.r - p.r_seed > 2 * p.r_test:
             particle_SM_nucleation(t,dn,p.r_test,
                                    p.r0_SM,p.k_SM,p.nu_SM,
                                    particle_MA,particle_seed,
@@ -83,7 +83,10 @@ def ngrun(zodb_URI,sim_id):
         rr *= p.k_SM
         dr = (p.k_MA * p.dt - rr * p.dt / particle_MA.r -
               dn * p.r0_SM * p.r0_SM / (2 * particle_MA.r))
-        particle_MA.grow_by_dr(dr)
+        # The first occurence of nuclei may lead dr < 0,
+        # which should be avoided
+        if (N == 0 and dr > 0) or (N > 0):
+            particle_MA.grow_by_dr(dr)
 
         particle_SM_growth(t,particle_MA,particle_seed,
                            particle_SM_active,particle_SM_inactive)
