@@ -1,0 +1,12 @@
+syntax: glob
+*.pyc
+*.swp
+flask-examples
+css-examples
+dist
+ngpy.egg-info
+ngpy/static/tmp/*
+ngpy/static/ui/minified/*
+ngpy/static/ui/i18n/*
+ngpy/static/themes/base/minified/*
+
