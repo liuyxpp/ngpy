@@ -62,7 +62,7 @@ class Param(Persistent):
         self.n_SM = eval(ini.get('Data','n_SM'))
         self.r_seed = eval(ini.get('Data','r_seed'))
         self.r_test = eval(ini.get('Data','r_test'))
-        self.interval_sample = eval(ini.get('Data','interval_sample'))
+        self.interval_save = int(eval(ini.get('Data','interval_save')))
         self.interval_show = eval(ini.get('Data','interval_show'))
         # [Program]
         self.exe_name = ini.get('Program','exe_name')
@@ -109,36 +109,47 @@ def is_touch_particle(par,plist):
     return False
 
 
-def particle_SM_nucleation(t,dn,r_test,r0,k,nu,pm,ps,pa,pi):
+def particle_SM_nucleation(t, dn, r_test, r0, k, nu, 
+                           pm, ps, pa, pi, max_try):
     n = int(dn)
-    x_low_limit = pm.o.x-pm.r
-    x_high_limit = pm.o.x+pm.r
-    y_low_limit = pm.o.y-pm.r
-    y_high_limit = pm.o.y+pm.r
+    x_low_limit = pm.o.x - pm.r
+    x_high_limit = pm.o.x + pm.r
+    y_low_limit = pm.o.y - pm.r
+    y_high_limit = pm.o.y + pm.r
+    p_new = []
     for i in xrange(n):
+        itry = 0
         while True:
-            x = np.random.uniform(x_low_limit,x_high_limit)
-            y = np.random.uniform(y_low_limit,y_high_limit)
-            test_pt = Vector2D(x,y)
+            x = np.random.uniform(x_low_limit, x_high_limit)
+            y = np.random.uniform(y_low_limit, y_high_limit)
+            test_pt = Vector2D(x, y)
             test_particle = Particle(o=test_pt,r=r_test)
             if pm.is_inner_point(test_pt):
-                #if not ps.is_inner_point(test_pt) and not is_in_particle_list (test_pt,pa) and not is_in_particle_list(test_pt,pi):
                 if (not test_particle.is_touch(ps) and not
                     is_touch_particle(test_particle,pa) and not
                     is_touch_particle(test_particle,pi)):
-                    pa.append(Particle(test_pt,r0,r0,t,k,nu))
+                    p = Particle(test_pt,r0,r0,t,k,nu)
+                    pa.append(p)
+                    p_new.append(p)
                     break
+            itry += 1
+            if itry > max_try:
+                break;
+    return p_new
 
 
 def particle_SM_growth(t,pm,ps,pa,pi):
     pao = pa[:]
     pio = pi[:]
+    p_stop = []
     for p in pao:
         p.grow_by_function(t)
         if (p.is_touch(ps) or is_touch_particle(p,pao) or
             is_touch_particle(p,pio)):
             pa.remove(p)
             pi.append(p)
+            p_stop.append(p)
+    return p_stop
 
 
 def init_draw(lx,ly,dx,dy,ps):

@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
     ngrun.py
@@ -28,26 +27,59 @@ from .particle import Particle
 from .vector2d import Vector2D
 from .ngofflattice_kooi import Param as FileParam
 from .ngofflattice_kooi import calc_num_nucleation
-from .ngofflattice_kooi import particle_SM_nucleation,particle_SM_growth
+from .ngofflattice_kooi import particle_SM_nucleation, particle_SM_growth
 
-from .ngzodb import connect_zodb,setup_simulation
+from .ngzodb import connect_zodb, setup_simulation
 from .ngutil import now2str
+
+def save_frame(frames, SM_list_g, index, t, pa, pi, pm, p_new, p_stop):
+    SM_list = [str(p.ID) for p in pa + pi]
+    frame = PersistentMapping({
+                        't':t,
+                        'r_MA':pm.r,
+                        'SM':PersistentList(SM_list),
+                            })
+    # Add new SM particles to the global list
+    for p in p_new:
+        SM_list_g[p.ID] = p
+    # Update SM particles in the global list which stops growing
+    for p in p_stop:
+        if SM_list_g.has_key(p.ID):
+            SM_list_g[p.ID].te = t
+    frames[index] = frame
+    transaction.commit()
+
 
 def ngrun(zodb_URI,sim_id):
     db = connect_zodb(zodb_URI)
     sim_uuid = uuid.UUID(sim_id)
     simulations = db['simulations']
     simulation = simulations[sim_uuid]
-    p = simulation['parameter']
+    param = simulation['parameter']
+    lx = param.lx
+    ly = param.ly
+    dx = param.dx
+    dy = param.dy
+    k_MA = param.k_MA
+    I_SM = param.n_SM
+    k_SM = param.k_SM
+    r0_SM = param.r0_SM
+    nu_SM = param.nu_SM
+    dt = param.dt
+    max_t = param.max_t
+    r_seed = param.r_seed
+    r_test = param.r_test
+    interval_save = param.interval_save
 
     #UPDATE and ABORT are not handled Currently
     #Only NEW and UPDATE simulation can be run
     if simulation['status'] not in ('NEW','UPDATE'):
         return
 
-    o_M = Vector2D(p.lx/2,p.ly/2)
-    particle_MA = Particle(o_M,p.r_seed,p.r_seed,0,p.k_MA,p.nu_MA)
-    particle_seed = Particle(o_M,p.r_seed,p.r_seed,0,0,0)
+    o_M = Vector2D(param.lx/2, param.ly/2)
+    particle_MA = Particle(o_M, param.r_seed, param.r_seed, 
+                           0, param.k_MA, param.nu_MA)
+    particle_seed = Particle(o_M, param.r_seed, param.r_seed, 0, 0, 0)
     particle_SM_active = []
     particle_SM_inactive = []
     area_untransformed = []
@@ -56,61 +88,69 @@ def ngrun(zodb_URI,sim_id):
     simulation['run_time'] = now2str()
     simulation['status'] = 'ACTIVE'
     simulation['particle_seed'] = particle_seed
+    simulation['particle_MA'] = particle_MA
+    simulation['particle_SM'] = PersistentMapping({})
+    ti = 2.0 * r_test / k_MA
+    particle_MA.r = r_seed + 2 * r_test
+    simulation['t_i'] = ti
     transaction.commit()
+    SM_list_global = simulation['particle_SM']
 
     if not simulation.has_key('frames'):
         simulation['frames'] = IOBTree.IOBTree()
         transaction.commit()
     frames = simulation['frames']
-    for i,t in np.ndenumerate(np.arange(p.dt,p.max_t+p.dt,p.dt)):
-        if 2 * particle_MA.r > p.lx:
+    for i,t in np.ndenumerate(np.arange(ti + param.dt, 
+                                        param.max_t + param.dt, param.dt)):
+        if 2 * particle_MA.r > lx or 2 * particle_MA.r > ly:
             break
         index, = i
 
-        I_SM = p.n_SM
-        dn = calc_num_nucleation(p.dt,I_SM,area_untransformed,
+        dn = calc_num_nucleation(dt, I_SM, area_untransformed,
                                  particle_MA,particle_seed,
                                  particle_SM_active,particle_SM_inactive)
+        N1 = len(particle_SM_active)
+        N2 = len(particle_SM_inactive)
         N = len(particle_SM_active) + len(particle_SM_inactive)
-        if dn > 0 and particle_MA.r - p.r_seed > 2 * p.r_test:
-            particle_SM_nucleation(t,dn,p.r_test,
-                                   p.r0_SM,p.k_SM,p.nu_SM,
-                                   particle_MA,particle_seed,
-                                   particle_SM_active,particle_SM_inactive)
+        print index,dn,N,N1,N2,particle_MA.r,particle_MA.r-r_seed - 2*r_test
+        p_new = []
+        if dn > 0 and particle_MA.r - r_seed > 2 * r_test:
+            max_try = int(lx*ly/(dx*dy))
+            p_new = particle_SM_nucleation(t, dn, r_test,
+                                    r0_SM, k_SM, nu_SM,
+                                    particle_MA, particle_seed,
+                                    particle_SM_active, 
+                                    particle_SM_inactive, max_try)
+            #print dn
+
+        dn = len(p_new) # the actual nucleated particle
         rr = 0.0
         for pc in particle_SM_active:
             rr += pc.r
-        rr *= p.k_SM
-        dr = (p.k_MA * p.dt - rr * p.dt / particle_MA.r -
-              dn * p.r0_SM * p.r0_SM / (2 * particle_MA.r))
+        rr *= k_SM
+        dr = k_MA * dt - rr * dt / particle_MA.r
+        if N > 0 and dn > 0:
+            dr -= dn * r0_SM * r0_SM / (2 * particle_MA.r)
         # The first occurence of nuclei may lead dr < 0,
         # which should be avoided
         if (N == 0 and dr > 0) or (N > 0):
             particle_MA.grow_by_dr(dr)
 
-        particle_SM_growth(t,particle_MA,particle_seed,
-                           particle_SM_active,particle_SM_inactive)
+        p_stop = particle_SM_growth(t, particle_MA, particle_seed,
+                                    particle_SM_active, 
+                                    particle_SM_inactive)
 
-        pa_list = IOBTree.IOBTree()
-        pi_list = IOBTree.IOBTree()
-        for i in range(len(particle_SM_active)):
-            pa_list[i] = copy.deepcopy(particle_SM_active[i])
-        for i in range(len(particle_SM_inactive)):
-            pi_list[i] = copy.deepcopy(particle_SM_inactive[i])
-        frame = PersistentMapping({
-            'particle_MA':copy.deepcopy(particle_MA),
-            'particle_SM_active':pa_list,
-            'particle_SM_inactive':pi_list
-            })
-        try:
-            frames[index] = frame
-            transaction.commit()
-        except KeyboardInterrupt:
-            transaction.abort()
-            simulation['status'] = 'ABORT'
-            simulation['abort_time'] = now2str()
-            transaction.commit()
-            sys.exit(0)
+        if index % interval_save == 0:
+            try:
+                save_frame(frames, SM_list_global, index, t,
+                           particle_SM_active, particle_SM_inactive,
+                           particle_MA, p_new, p_stop)
+            except KeyboardInterrupt:
+                transaction.abort()
+                simulation['status'] = 'ABORT'
+                simulation['abort_time'] = now2str()
+                transaction.commit()
+                sys.exit(0)
 
     simulation['status'] = 'FINISH'
     simulation['finish_time'] = now2str()
@@ -127,24 +167,4 @@ def ngabort(zodb_URI,sim_id):
         simulation['status'] = 'ABORT'
         simulation['abort_time'] = now2str()
         transaction.commit()
-
-
-if __name__ == '__main__':
-    params = FileParam('ngrc.ini')
-    db = connect_zodb(params.database)
-    sim_id = None
-    if not db.has_key('simulations'):
-        sim_id = setup_simulation(params)
-    simulations = db['simulations']
-    if not len(simulations):
-        sim_id = setup_simulation(params)
-    for k in simulations.keys():
-        simulation = simulations[k]
-        if simulation['status'] == 'NEW':
-            sim_id = k
-            break
-    if sim_id is None:
-        sim_id = setup_simulation(params)
-
-    ngrun(sim_id)
 

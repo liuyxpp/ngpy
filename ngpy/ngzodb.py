@@ -71,6 +71,10 @@ def connect_zodb(zodb_URI):
 
 
 def create_zodb(zodb_URI):
+    ''' zodb_URI example:
+            zeo://localhost:1234
+    '''
+
     db = connect_zodb(zodb_URI)
     if not db.has_key('simulations'):
         db['simulations'] = OOBTree.OOBTree()
