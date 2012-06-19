@@ -17,7 +17,7 @@ from .vector2d import Vector2D
 class Particle(Persistent):
     def __init__(self, o=Vector2D(), 
                  r0=0.0, r=0.0, t0=0.0, k=1.0, nu=1.0):
-        self.ID = uuid.uuid4()
+        self.ID = str(uuid.uuid4())
         self.o = o        # center of the circular particle
         self.r0 = float(r0)
         self.r = float(r)

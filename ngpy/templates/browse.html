@@ -5,6 +5,7 @@
 <script type=text/javascript>
     $(function() {
         var frame_max = $('#framemax').val();
+        var frame_interval = $('#frameinterval').val();
         function render(frame_id){
             $.getJSON($SCRIPT_ROOT+'/_browsefeed',{
                     simid:$('#simid').val(),
@@ -18,11 +19,15 @@
         var sliderframe = $('#sliderframe').slider({
             min:0,
             max:frame_max,
+            step:frame_interval,
             change:function(event,ui){ 
                 render(ui.value); 
             }
         });
         var spinner = $('#selectframe').spinner({
+            min:0,
+            max:frame_max,
+            step:frame_interval,
             spin:function(event,ui){
                 var fid = ui.value;
                 if(fid>frame_max){
@@ -95,23 +100,27 @@
             nuc();
         });
         var spinnersim = $('#spinnersim').spinner({
+            min:frame_interval,
+            max:frame_max,
+            step:frame_interval,
             spin:function(event,ui){
                 var fid = ui.value;
                 if(fid>frame_max){
-                    $(this).spinner("value",1);
+                    $(this).spinner("value",frame_interval);
                     return false;
                 }
-                else if(fid<1){
+                else if(fid<frame_interval){
                     $(this).spinner("value",frame_max);
                     return false;
                 }
             }
         });
-        $('#spinnersim').val(1);
+        $('#spinnersim').val(frame_interval);
         var slidersim = $('#slidersim').slider({
             range:true,
             min:0,
             max:frame_max,
+            step:frame_interval,
             values:[0,frame_max],
             slide:function(event,ui){
                     $("#framerange").val(ui.values[0]+"-"+ui.values[1]);
@@ -180,6 +189,7 @@
   <form id="browse">
     <input id=simid type=hidden value={{ sim_id }} />
     <input id=framemax type=hidden value={{ frame_max }} />
+    <input id=frameinterval type=hidden value={{ frame_interval }} />
   </form>
   <span>Select a frame to show </span>
   <input id="selectframe" name="value" />

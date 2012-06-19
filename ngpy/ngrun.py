@@ -30,32 +30,39 @@ from .ngofflattice_kooi import calc_num_nucleation
 from .ngofflattice_kooi import particle_SM_nucleation, particle_SM_growth
 
 from .ngzodb import connect_zodb, setup_simulation
+from .ngzodb import get_simulation, get_parameter
 from .ngutil import now2str
 
 def save_frame(frames, SM_list_g, index, t, pa, pi, pm, p_new, p_stop):
-    SM_list = [str(p.ID) for p in pa + pi]
+    # Update global list
+    for p in p_new:
+        SM_list_g[p.ID] = p
+        transaction.commit()
+
+    for p in p_stop:
+        if SM_list_g.has_key(p.ID):
+            SM_list_g[p.ID].te = t
+            transaction.commit()
+        else:
+            raise ValueError('Error: stopping particle is not in global list.')
+
+    # Add new frame
+    SM_list = [p.ID for p in pa + pi]
     frame = PersistentMapping({
                         't':t,
                         'r_MA':pm.r,
                         'SM':PersistentList(SM_list),
                             })
-    # Add new SM particles to the global list
-    for p in p_new:
-        SM_list_g[p.ID] = p
-    # Update SM particles in the global list which stops growing
-    for p in p_stop:
-        if SM_list_g.has_key(p.ID):
-            SM_list_g[p.ID].te = t
     frames[index] = frame
     transaction.commit()
 
 
-def ngrun(zodb_URI,sim_id):
-    db = connect_zodb(zodb_URI)
-    sim_uuid = uuid.UUID(sim_id)
+def ngrun(zodb_uri, sim_id):
+    db = connect_zodb(zodb_uri)
     simulations = db['simulations']
+    sim_uuid = uuid.UUID(sim_id)
     simulation = simulations[sim_uuid]
-    param = simulation['parameter']
+    param = get_parameter(simulation)
     lx = param.lx
     ly = param.ly
     dx = param.dx
@@ -109,10 +116,10 @@ def ngrun(zodb_URI,sim_id):
         dn = calc_num_nucleation(dt, I_SM, area_untransformed,
                                  particle_MA,particle_seed,
                                  particle_SM_active,particle_SM_inactive)
-        N1 = len(particle_SM_active)
-        N2 = len(particle_SM_inactive)
+        #N1 = len(particle_SM_active)
+        #N2 = len(particle_SM_inactive)
         N = len(particle_SM_active) + len(particle_SM_inactive)
-        print index,dn,N,N1,N2,particle_MA.r,particle_MA.r-r_seed - 2*r_test
+        #print index,dn,N,N1,N2,particle_MA.r,particle_MA.r-r_seed - 2*r_test
         p_new = []
         if dn > 0 and particle_MA.r - r_seed > 2 * r_test:
             max_try = int(lx*ly/(dx*dy))
@@ -140,7 +147,7 @@ def ngrun(zodb_URI,sim_id):
                                     particle_SM_active, 
                                     particle_SM_inactive)
 
-        if index % interval_save == 0:
+        if p_new or p_stop or (index % interval_save == 0):
             try:
                 save_frame(frames, SM_list_global, index, t,
                            particle_SM_active, particle_SM_inactive,

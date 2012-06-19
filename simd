@@ -9,7 +9,7 @@ from redis import Redis
 
 from ngpy.ngrun import ngrun, ngabort
 
-def queue_daemon(redis,qkey):
+def queue_daemon(redis, qkey):
     jobs = {}
     while 1:
         msg = redis.blpop(qkey)
@@ -25,21 +25,21 @@ def queue_daemon(redis,qkey):
                 p = jobs[sim_id]
                 p.terminate()
                 p.join()
-                ngabort(zodb_uri,sim_id)
+                ngabort(zodb_uri, sim_id)
                 del jobs[sim_id]
                 print "ABORT: %s" % sim_id
             else:
                 # push back the msg in case there are other simd instances.
-                redis.rpush(msg)
+                redis.rpush(qkey, msg)
 
 
 if __name__ == '__main__':
     # In production mode, 
     # the 'console' and 'simQ' should be provided in the command line.
     parser = argparse.ArgumentParser()
-    parser.add_argument('-r','--redis',default='localhost',
+    parser.add_argument('-r', '--redis', default='localhost',
                         help='specify redis host by IP or hostname')
-    parser.add_argument('-q','--qkey',default='simQ',
+    parser.add_argument('-q', '--qkey', default='simQ',
                         help='specify qkey which identifies the task message')
 
     args = parser.parse_args()

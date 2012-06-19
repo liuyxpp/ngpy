@@ -120,6 +120,8 @@ def particle_SM_nucleation(t, dn, r_test, r0, k, nu,
     for i in xrange(n):
         itry = 0
         while True:
+            if itry > max_try:
+                break;
             x = np.random.uniform(x_low_limit, x_high_limit)
             y = np.random.uniform(y_low_limit, y_high_limit)
             test_pt = Vector2D(x, y)
@@ -133,8 +135,6 @@ def particle_SM_nucleation(t, dn, r_test, r0, k, nu,
                     p_new.append(p)
                     break
             itry += 1
-            if itry > max_try:
-                break;
     return p_new
 
 

@@ -15,6 +15,9 @@ from .ngzodb import setup_simulation, update_simulation, del_simulation
 from .ngzodb import find_simulations,setup_group,update_group
 from .ngzodb import find_simulations_by_group
 from .ngzodb import execute_simulation,cancel_simulation
+from .ngzodb import get_simulation, get_parameter, get_frame
+from .ngzodb import get_particle_seed
+from .ngzodb import get_frame_max, get_frame_interval, get_num_frames
 from .ngutil import FormParam, now2str
 from .ngplot import render_simulation_frame,render_psd,calc_volume,calc_n
 from .ngplot import render_volume,render_nucleation
@@ -57,7 +60,6 @@ def error():
 
 @app.route("/simple/<sim_id>")
 def simple(sim_id):
-    import numpy as np
     import StringIO
 
     from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
@@ -144,24 +146,23 @@ def group_analysis_feed():
     frame_interval = int(request.form['frameinterval'])
     # find the actual frame_high
     for sim_id in sim_list.split(","):
-        sim_uuid = uuid.UUID(sim_id)
-        simulation = db['simulations'][sim_uuid]
-        frame_cur = len(simulation['frames']) -1
+        simulation = get_simulation(sim_id)
+        frame_cur = get_frame_max(simulation)
         if frame_cur < frame_high:
             frame_high = frame_cur
     user = 'lyx'
-    qkey = user+':'+gname+':simulations'
-    redis.set(qkey,sim_list)
+    qkey = user + ':' + gname + ':simulations'
+    redis.set(qkey, sim_list)
     for sim_id in sim_list.split(","):
         if psdcheck:
             psdfile = make_psdfile(sim_id,
-                                   frame_low,frame_high,frame_interval)
+                                   frame_low, frame_high, frame_interval)
         if volmcheck or volscheck or voltcheck:
             volfile = make_volfile(sim_id,
-                                   frame_low,frame_high,frame_interval)
+                                   frame_low, frame_high, frame_interval)
         if ncheck:
-            nucfile = make_nucfile(sim_id,n_type,
-                                   frame_low,frame_high,frame_interval)
+            nucfile = make_nucfile(sim_id, n_type,
+                                   frame_low, frame_high, frame_interval)
     volmsrc = ""
     volssrc = ""
     voltsrc = ""
@@ -170,28 +171,28 @@ def group_analysis_feed():
         # add timestamp to enforce refreshing image
         volmsrc = url_for("render_group_volume",
                           voltype = 'volm',
-                          qkey=qkey,batchvar=batchvar,t=str(time()))
+                          qkey=qkey, batchvar=batchvar, t=str(time()))
     if volscheck:
         # add timestamp to enforce refreshing image
         volssrc = url_for("render_group_volume",
-                          voltype = 'vols',
-                          qkey=qkey,batchvar=batchvar,t=str(time()))
+                          voltype='vols',
+                          qkey=qkey, batchvar=batchvar, t=str(time()))
     if voltcheck:
         # add timestamp to enforce refreshing image
         voltsrc = url_for("render_group_volume",
-                          voltype = 'volt',
-                          qkey=qkey,batchvar=batchvar,t=str(time()))
+                          voltype='volt',
+                          qkey=qkey, batchvar=batchvar, t=str(time()))
     if ncheck:
         # add timestamp to enforce refreshing image
         nsrc = url_for("render_group_nucleation",
-                       qkey=qkey,batchvar=batchvar,t=str(time()))
+                       qkey=qkey, batchvar=batchvar, t=str(time()))
     datahref = "#"
     datatext = "At least select one term to analyze"
     if psdcheck or volmcheck or volscheck or voltcheck or ncheck:
-        datatext = archive_group_data(gname,batchvar,sim_list,
-                                      psdcheck,volmcheck,
-                                      volscheck,voltcheck,ncheck)
-        datahref = url_for("static",filename="tmp/"+datatext)
+        datatext = archive_group_data(gname, batchvar, sim_list,
+                                      psdcheck, volmcheck,
+                                      volscheck, voltcheck, ncheck)
+        datahref = url_for("static", filename="tmp/"+datatext)
     return jsonify(volmsrc=volmsrc,
                    volssrc=volssrc,
                    voltsrc=voltsrc,
@@ -204,37 +205,36 @@ def group_analysis_feed():
 @app.route("/create/",methods=['Get','POST'])
 @app.route("/create/<sim_id>",methods=['Get','POST'])
 def new_simulation(sim_id=None):
-    simulations = db['simulations']
-    # copy params from sim_id
-    sim_uuid = 0
-    if sim_id is not None:
-        sim_uuid = uuid.UUID(sim_id)
-    params = None
-    if simulations.has_key(sim_uuid):
-        simulation = simulations[sim_uuid]
-        params = simulation['parameter']
-    form = NewSimulationForm(request.form,params)
+    if sim_id is None:
+        simulation = None
+    else:
+        simulation = get_simulation(sim_id)
+    if simulation is None:
+        params = None
+    else:
+        params = get_parameter(simulation)
+    form = NewSimulationForm(request.form, params)
     groups = db['sim_groups']
     form.group.choices = [(group,group) for group in groups.keys()]
-    if request.method == 'POST' and form.validate():
+    if request.method == 'POST':# and form.validate():
         params = FormParam(form)
         owner = 'lyx' # which should be modified after introduction of
                      # authentication
         name = form.name.data
         group = form.group.data
-        sim_id = setup_simulation(db,params,name,owner,group)
+        sim_id = setup_simulation(db, params, name, owner, group)
         if form.mode.data:
             # batch_var is in
             # (lx,Lx,dt,max_t,k_MA,nu_MA,k_SM,nu_SM,n_SM,r_seed,r_seed)
             batch_var = form.batchvar.data
-            update_group(db,group,batch_var)
+            update_group(db, group, batch_var)
             batch_step = form.batchstep.data
             batch_max = form.batchmax.data + batch_step
             batch_min = form.batchmin.data + batch_step
-            for val in np.arange(batch_min,batch_max,batch_step):
-                params.setval(batch_var,val)
-                sim_id = setup_simulation(db,params,name,owner,group)
-        return redirect(url_for('view_simulation',sim_id=sim_id))
+            for val in np.arange(batch_min, batch_max, batch_step):
+                params.setval(batch_var, val)
+                sim_id = setup_simulation(db, params, name, owner, group)
+        return redirect(url_for('view_simulation', sim_id=sim_id))
     else:
         if params is not None:
             form.group.data = simulation['group']
@@ -243,14 +243,10 @@ def new_simulation(sim_id=None):
 
 @app.route('/view/<sim_id>',methods=['GET','POST'])
 def view_simulation(sim_id):
-    simulations = db['simulations']
-    sim_uuid = uuid.UUID(sim_id)
-    if not simulations.has_key(sim_uuid):
+    simulation = get_simulation(sim_id)
+    if simulation is None:
         return redirect(url_for('index'))
-    simulation = simulations[sim_uuid]
-    num_frames = 0
-    if simulation.has_key('frames'):
-        num_frames = len(simulation['frames'])
+    num_frames = get_num_frames(simulation)
     update_time = simulation['update_time']
     run_time = simulation['run_time']
     abort_time = simulation['abort_time']
@@ -286,21 +282,19 @@ def issue_edit():
 
 @app.route("/edit/<sim_id>",methods=['GET','POST'])
 def edit_simulation(sim_id):
-    simulations = db['simulations']
-    sim_uuid = uuid.UUID(sim_id)
-    if not simulations.has_key(sim_uuid):
+    simulation = get_simulation(sim_id)
+    if simulation is None:
         return redirect(url_for('index'))
-    simulation = simulations[sim_uuid]
     if simulation['status'] not in ('NEW','UPDATE'):
         return redirect(url_for('index'))
-    params = simulation['parameter']
-    form = NewSimulationForm(request.form,params)
+    params = get_parameter(simulation)
+    form = NewSimulationForm(request.form, params)
     groups = db['sim_groups']
-    form.group.choices = [(group,group) for group in groups.keys()]
+    form.group.choices = [(group, group) for group in groups.keys()]
     if form.validate_on_submit():
         p = FormParam(form)
-        update_simulation(db,sim_id,p,form.name.data,form.group.data)
-        return redirect(url_for('view_simulation',sim_id=sim_id))
+        update_simulation(db, sim_id, p, form.name.data, form.group.data)
+        return redirect(url_for('view_simulation', sim_id=sim_id))
     else:
         form.name.data = simulation['name']
         form.group.data = simulation['group']
@@ -312,18 +306,18 @@ def delete_simulation():
     simulations = db['simulations']
     form = SelectSimulationForm(request.form)
     form.simulations.choices = [
-        (str(sim_id),str(sim_id)) for sim_id in simulations.keys()
+        (str(sim_id), str(sim_id)) for sim_id in simulations.keys()
         ]
     if request.method == 'POST':
-        del_simulation(db,form.simulations.data)
+        del_simulation(db, form.simulations.data)
         return redirect(url_for('delete_simulation'))
     else:
-        return render_template('delete.html',form=form)
+        return render_template('delete.html', form=form)
 
 
 @app.route("/delete/<sim_id>")
 def delete_by_id(sim_id):
-    del_simulation(db,sim_id)
+    del_simulation(db, sim_id)
     return redirect(url_for('delete_simulation'))
 
 
@@ -346,33 +340,24 @@ def select_simulation():
 
 @app.route("/browse/<sim_id>",methods=['GET','POST'])
 def browse_simulation(sim_id):
-    simulations = db['simulations']
-    sim_uuid = uuid.UUID(sim_id)
-    if not simulations.has_key(sim_uuid):
-        abort(404)
-    simulation = simulations[sim_uuid]
-    if not simulation.has_key('frames'):
-        abort(404)
-    frame_max = len(simulation['frames']) - 1
-    if frame_max < 0:
-        abort(404)
+    simulation = get_simulation(sim_id)
+    params = get_parameter(simulation)
+    frame_max = get_frame_max(simulation)
+    frame_interval = get_frame_interval(simulation)
     frame_id = eval(request.args.get('frame','0'))
-    return render_template('browse.html',
-                           params=simulation['parameter'],
-                           sim_id=sim_id,frame_id=frame_id,
-                           frame_max=frame_max)
+    return render_template('browse.html', params=params,
+                           sim_id=sim_id, frame_id=frame_id,
+                           frame_max=frame_max, 
+                           frame_interval=frame_interval)
 
 
 @app.route("/_browsefeed",methods=['GET','POST'])
 def browse_feed():
     sim_id = request.args.get("simid")
     frame_id = request.args.get("frame",0,type=int)
-    simulations = db['simulations']
-    simulation = simulations[uuid.UUID(sim_id)]
+    simulation = get_simulation(sim_id)
+    frame_max = get_frame_max(simulation)
 
-    if not simulation.has_key('frames'):
-        frame_id = -1
-    frame_max = len(simulation['frames']) - 1 # frame_id is (0, frame_max)
     if frame_id < 0 or frame_id > frame_max:
         frame_id = -1
         return jsonify(imgsrc="",frame=frame_id)
@@ -385,15 +370,13 @@ def browse_feed():
 
 @app.route("/run/<sim_id>")
 def run_simulation(sim_id):
-    simulations = db['simulations']
-    sim_uuid = uuid.UUID(sim_id)
-    if not simulations.has_key(sim_uuid):
+    simulation = get_simulation(sim_id)
+    if simulation is None:
         abort(404)
-    simulation = simulations[sim_uuid]
     if simulation['status'] not in ('NEW','UPDATE'):
         abort(404)
-    execute_simulation(redis,sim_id)
-    return redirect(url_for('live_simulation',sim_id=sim_id))
+    execute_simulation(redis, sim_id)
+    return redirect(url_for('live_simulation', sim_id=sim_id))
 
 
 @app.route("/batchrun",methods=['GET','POST'])
@@ -402,17 +385,17 @@ def batch_run_simulation():
     last_run = None
     if request.method == 'POST':
         for sim_id in request.form.keys():
-            sim_uuid = uuid.UUID(sim_id)
-            if not simulations.has_key(sim_uuid):
+            simulation = get_simulation(sim_id)
+            if simulation is None:
                 continue
-            simulation = simulations[sim_uuid]
             if simulation['status'] in ('NEW','UPDATE'):
-                execute_simulation(redis,sim_id)
+                execute_simulation(redis, sim_id)
                 last_run = sim_id
         if last_run is None:
-            return redirect(url_for('error',message='No simulation executed in batch_run_simulation'))
+            return redirect(url_for('error', 
+                                    message='No simulation executed in batch_run_simulation'))
         else:
-            return redirect(url_for('live_simulation',sim_id=last_run))
+            return redirect(url_for('live_simulation', sim_id=last_run))
     else:
         return redirect(url_for('error',
                                 message='Only POST method is supported in batch_run_simulation'))
@@ -420,8 +403,8 @@ def batch_run_simulation():
 
 @app.route("/abort/<sim_id>")
 def abort_simulation(sim_id):
-    cancel_simulation(redis,sim_id)
-    return redirect(url_for('view_simulation',sim_id=sim_id))
+    cancel_simulation(redis, sim_id)
+    return redirect(url_for('view_simulation', sim_id=sim_id))
 
 
 @app.route("/batchabort",methods=['POST'])
@@ -430,18 +413,17 @@ def batch_abort_simulation():
     last_abort = None
     if request.method == 'POST':
         for sim_id in request.form.keys():
-            sim_uuid = uuid.UUID(sim_id)
-            if not simulations.has_key(sim_uuid):
+            simulation = get_simulation(sim_id)
+            if simulation is None:
                 continue
-            simulation = simulations[sim_uuid]
             if simulation['status'] == 'ACTIVE':
-                cancel_simulation(redis,sim_id)
+                cancel_simulation(redis, sim_id)
                 last_abort = sim_id
         if last_abort is None:
             return redirect(url_for('error',
                                     message='No simulation executed in batch_abort_simulation'))
         else:
-            return redirect(url_for('view_simulation',sim_id=last_abort))
+            return redirect(url_for('view_simulation', sim_id=last_abort))
     else:
         return redirect(url_for('error',
                                 message='Only POST method is supported in batch_abort_simulation'))
@@ -449,37 +431,36 @@ def batch_abort_simulation():
 
 @app.route("/live/<sim_id>")
 def live_simulation(sim_id):
-    simulations = db['simulations']
-    simulation = simulations[uuid.UUID(sim_id)]
+    simulation = get_simulation(sim_id)
+    params = get_parameter(simulation)
     if simulation['status'] != 'ACTIVE':
-        return redirect(url_for('browse_simulation',sim_id=sim_id))
+        return redirect(url_for('browse_simulation', sim_id=sim_id))
     return render_template('live.html',
                            sim_id=sim_id,
-                           params=simulation['parameter'])
+                           params=params)
 
 
 @app.route("/_livefeed")
 def live_feed():
     sim_id = request.args.get("simid")
-    simulations = db['simulations']
-    simulation = simulations[uuid.UUID(sim_id)]
-    params = simulation['parameter']
+    simulation = get_simulation(sim_id)
+    params = get_parameter(simulation)
     frame_max = params.max_t / params.dt
+    frame_interval = get_frame_interval(simulation)
 
     if simulation['status'] != 'ACTIVE':
         return jsonify(redirect=True,
                        url=url_for('browse_simulation',sim_id=sim_id))
-    if not simulation.has_key('frames'):
-        frame_id = -1
+
+    frame_id = get_frame_max(simulation)
+    if frame_id == -1:
         return jsonify(imgsrc="")
 
-    frame_id = len(simulation['frames']) - 1
     progress = (frame_id + 1) / frame_max
     progress = int(round(progress * 100))
     return jsonify(imgsrc=url_for("render_simulation_frame",
-                                  sim_id=sim_id,frame=frame_id),
-                   frame=frame_id,
-                   progress=progress
+                                  sim_id=sim_id, frame=frame_id),
+                   frame=frame_id, progress=progress
                   )
 
 
@@ -503,12 +484,9 @@ def psd_feed():
     sim_id = request.args.get("simid")
     frame_id = request.args.get("frame",0,type=int)
     psd_type = request.args.get("psdtype",'density')
-    simulations = db['simulations']
-    simulation = simulations[uuid.UUID(sim_id)]
+    simulation = get_simulation(sim_id)
 
-    if not simulation.has_key('frames'):
-        frame_id = -1
-    frame_max = len(simulation['frames']) - 1 # frame_id is (0, frame_max)
+    frame_max = get_frame_max(simulation)
     if frame_id < 0 or frame_id > frame_max:
         return jsonify(imgsrc="")
 
@@ -524,41 +502,33 @@ def psd_feed():
 def volume_feed():
     sim_id = request.args.get("simid")
     frame_id = request.args.get("frame",0,type=int)
-    simulations = db['simulations']
-    simulation = simulations[uuid.UUID(sim_id)]
+    simulation = get_simulation(sim_id)
 
-    if not simulation.has_key('frames'):
-        frame_id = -1
-    frames = simulation['frames']
-    frame_max = len(frames) - 1 # frame_id is (0, frame_max)
+    frame_max = get_frame_max(simulation)
     if frame_id < 0 or frame_id > frame_max:
         return jsonify(volm=0,vols=0,volt=0)
 
-    frame = frames[frame_id]
-    ps = simulation['particle_seed']
-    volm,vols,volt = calc_volume(frame,ps)
-    return jsonify(volm=volm,vols=vols,volt=volt)
+    frame = get_frame(simulation, frame_id)
+    volm, vols, volt = calc_volume(simulation, frame)
+    return jsonify(volm=volm, vols=vols, volt=volt)
 
 
 @app.route("/_simvolfeed",methods=['GET','POST'])
 def simulation_volume_feed():
     sim_id = request.args.get("simid")
-    simulations = db['simulations']
-    simulation = simulations[uuid.UUID(sim_id)]
+    simulation = get_simulation(sim_id)
 
-    if not simulation.has_key('frames'):
-        return jsonify(imgsrc="")
+    frame_max = get_frame_max(simulation)
+    frame_interval = get_frame_interval(simulation)
+    frame_low = request.args.get("framelow", 0, type=int)
+    frame_high = request.args.get("framehigh", frame_max, type=int)
+    frame_interval = request.args.get("frameinterval",
+                                      frame_interval, type=int)
 
-    frames = simulation['frames']
-    frame_max = len(frames) - 1 # frame_id is (0, frame_max)
-    frame_low = request.args.get("framelow",0,type=int)
-    frame_high = request.args.get("framehigh",frame_max,type=int)
-    frame_interval = request.args.get("frameinterval",1,type=int)
-
-    datafile = make_volfile(sim_id,frame_low,frame_high,frame_interval)
+    datafile = make_volfile(sim_id, frame_low, frame_high, frame_interval)
     return jsonify(imgsrc=url_for("render_volume",
-                                  datafile=datafile,t=str(time())),
-                   datahref=url_for("static",filename="tmp/"+datafile)
+                                  datafile=datafile, t=str(time())),
+                   datahref=url_for("static", filename="tmp/"+datafile)
                   )
 
 
@@ -566,41 +536,33 @@ def simulation_volume_feed():
 def nucleation_feed():
     sim_id = request.args.get("simid")
     frame_id = request.args.get("frame",0,type=int)
-    simulations = db['simulations']
-    simulation = simulations[uuid.UUID(sim_id)]
+    simulation = get_simulation(sim_id)
 
-    if not simulation.has_key('frames'):
-        frame_id = -1
-    frames = simulation['frames']
-    frame_max = len(frames) - 1 # frame_id is (0, frame_max)
+    frame_max = get_frame_max(simulation)
     if frame_id < 0 or frame_id > frame_max:
         return jsonify(n=0)
 
-    frame = frames[frame_id]
-    ps = simulation['particle_seed']
-    n = calc_n(frame)
+    frame = get_frame(simulation, frame_id)
+    n = calc_n(simulation, frame)
     return jsonify(n=n)
 
 
 @app.route("/_simnucfeed",methods=['GET','POST'])
 def simulation_nucleation_feed():
     sim_id = request.args.get("simid")
-    simulations = db['simulations']
-    simulation = simulations[uuid.UUID(sim_id)]
+    simulation = get_simulation(sim_id)
 
-    if not simulation.has_key('frames'):
-        return jsonify(imgsrc="")
-    frames = simulation['frames']
-    frame_max = len(frames) - 1 # frame_id is (0, frame_max)
-
+    frame_max = get_frame_max(simulation)
+    frame_interval = get_frame_interval(simulation)
     n_type = request.args.get("ntype",'density')
-    frame_low = request.args.get("framelow",0,type=int)
-    frame_high = request.args.get("framehigh",frame_max,type=int)
-    frame_interval = request.args.get("frameinterval",1,type=int)
+    frame_low = request.args.get("framelow", 0, type=int)
+    frame_high = request.args.get("framehigh", frame_max, type=int)
+    frame_interval = request.args.get("frameinterval", 
+                                      frame_interval, type=int)
 
     datafile = make_nucfile(sim_id,n_type,
                             frame_low,frame_high,frame_interval)
     return jsonify(imgsrc=url_for("render_nucleation",
-                                  datafile=datafile,t=str(time())),
-                   datahref=url_for("static",filename="tmp/"+datafile)
+                                  datafile=datafile, t=str(time())),
+                   datahref=url_for("static", filename="tmp/"+datafile)
                   )

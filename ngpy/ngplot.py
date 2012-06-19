@@ -24,7 +24,12 @@ from flask import request, make_response
 from ngpy import app,db,redis
 
 from .ngofflattice_kooi import calc_area_M
-from .ngutil import Group,Parameters,GroupInfo
+from .ngutil import Group, Parameters, GroupInfo
+from .ngzodb import get_batch_value, get_simulation, get_frame
+from .ngzodb import get_particle_MA, get_particle_seed
+from .ngzodb import get_parameter, get_t, get_ti, get_particle_MA_r
+from .ngzodb import get_particle_SM_list_global, get_particle_SM_list_frame
+from .ngzodb import get_SM_particle_list
 
 GRAY_M = 63
 GRAY_SEED = 255
@@ -36,38 +41,33 @@ TMP_PATH = os.path.dirname(__file__) + "/static/tmp/"
 
 @app.route("/render/<sim_id>")
 def render_simulation_frame(sim_id):
-    simulations = db['simulations']
-    sim_uuid = uuid.UUID(sim_id)
-    if not simulations.has_key(sim_uuid):
-        return "Error: No simulation " + sim_id + "."
-    simulation = simulations[sim_uuid]
-    if not simulation.has_key('frames'):
-        return "Error: simulation " + sim_id + " does not have any frames."
-    frames = simulation['frames']
+    simulation = get_simulation(sim_id)
     frame_id = eval(request.args.get('frame','0'))
-    if not frames.has_key(frame_id):
-        return "Error: simulation " + sim_id + " does not have frame"+str(frame_id)+"."
-    frame = frames[frame_id]
+    frame = get_frame(simulation, frame_id)
 
-    p = simulation['parameter']
-    ps = simulation['particle_seed']
-    pm = frame['particle_MA']
-    pa = frame['particle_SM_active']
-    pi = frame['particle_SM_inactive']
+    p = get_parameter(simulation)
+    ps = get_particle_seed(simulation)
+    pm = get_particle_MA(simulation, frame)
+    t = get_t(frame)
 
-    lattice = np.zeros((p.Lx,p.Ly),int)
+    # reconstruct particle_SM_active and particle_SM_inactive list
+    pa, pi = get_SM_particle_list(simulation, frame)
+
+    lattice = np.zeros((p.Lx, p.Ly), int)
     number_active_max = (GRAY_INACTIVE -  GRAY_ACTIVE_BASE) / GRAY_ACTIVE_STEP
-    pm.draw_on_lattice(GRAY_M,p.lx,p.ly,lattice)
-    ps.draw_on_lattice(GRAY_SEED,p.lx,p.ly,lattice)
-    for i,particle in pa.iteritems():
+    pm.draw_on_lattice(GRAY_M, p.lx, p.ly, lattice)
+    ps.draw_on_lattice(GRAY_SEED, p.lx, p.ly, lattice)
+    i = 0
+    for particle in pa:
         particle.draw_on_lattice(i*GRAY_ACTIVE_STEP+GRAY_ACTIVE_BASE,
-                          p.lx,p.ly,lattice)
-    for i,particle in pi.iteritems():
-        particle.draw_on_lattice(GRAY_INACTIVE,p.lx,p.ly,lattice)
+                                p.lx, p.ly, lattice)
+        i += 1
+    for particle in pi:
+        particle.draw_on_lattice(GRAY_INACTIVE, p.lx, p.ly, lattice)
 
-    fig=Figure()
-    ax=fig.add_subplot(111)
-    ax.imshow(lattice,cmap=colormap.gray,vmin=0,vmax=255)
+    fig = Figure()
+    ax = fig.add_subplot(111)
+    ax.imshow(lattice, cmap=colormap.gray, vmin=0, vmax=255)
 
     canvas = FigureCanvas(fig)
     png_output = StringIO.StringIO()
@@ -77,14 +77,13 @@ def render_simulation_frame(sim_id):
     return response
 
 
-def make_psd(frame):
-    pa = frame['particle_SM_active']
-    pi = frame['particle_SM_inactive']
+def make_psd(simulation, frame):
+    pa, pi = get_SM_particle_list(simulation, frame)
     diameters = []
-    for ipa in pa.values():
+    for ipa in pa:
         if 2 * ipa.r > 0:
             diameters.append(2*ipa.r)
-    for ipi in pi.values():
+    for ipi in pi:
         if 2 * ipi.r >0:
             diameters.append(2*ipi.r)
     return diameters
@@ -93,23 +92,14 @@ def make_psd(frame):
 def render_psd(sim_id):
     psd_type = request.args.get('psdtype')
     frame_id = request.args.get('frame',0,type=int)
-    simulations = db['simulations']
-    sim_uuid = uuid.UUID(sim_id)
-    if not simulations.has_key(sim_uuid):
-        return "Error: No simulation " + sim_id + "."
-    simulation = simulations[sim_uuid]
-    if not simulation.has_key('frames'):
-        return "Error: simulation " + sim_id + " does not have any frames."
-    frames = simulation['frames']
-    if not frames.has_key(frame_id):
-        return "Error: simulation " + sim_id + " does not have frame"+str(frame_id)+"."
-    frame = frames[frame_id]
+    simulation = get_simulation(sim_id)
+    frame = get_frame(simulation, frame_id)
 
-    diameters = make_psd(frame)
+    diameters = make_psd(simulation, frame)
     if diameters:
         bins = np.arange(0,500,20)
-        fig=Figure()
-        ax=fig.add_subplot(111)
+        fig = Figure()
+        ax = fig.add_subplot(111)
         if psd_type == 'density':
             ax.hist(diameters,bins,normed=True)
         else:
@@ -128,25 +118,28 @@ def render_psd(sim_id):
         response.headers['Content-Type'] = 'image/png'
         return response
     else:
-        return "Error: simulation " + sim_id + " does not have any particles."
+        raise ValueError('Error: simulation ' + sim_id + 
+                         ' does not have any particles.')
 
 # lastone: make only the last frame PSD
-def make_psdfile(sim_id,frame_low,frame_high,frame_interval,
+def make_psdfile(sim_id, frame_low, frame_high, frame_interval,
                  lastone=True):
-    simulations = db['simulations']
-    sim_uuid = uuid.UUID(sim_id)
-    simulation = simulations[sim_uuid]
-    frames = simulation['frames']
+    simulation = get_simulation(sim_id)
 
     data_list = []
     if lastone:
-        diameters = make_psd(frames[frame_high])
+        frame_last = get_frame(simulation, frame_high)
+        diameters = []
+        if not frame_last is None:
+            diameters = make_psd(simulation, frame_last)
         data_list.append(diameters)
     else:
-        frame_list = range(frame_low,frame_high+1,frame_interval)
-        i = 1
+        frame_list = range(frame_low, frame_high+1, frame_interval)
         for frame_id in frame_list:
-            diameters = make_psd(frame[frame_id])
+            frame = get_frame(simulation, frame_id)
+            diameters = []
+            if not frame is None:
+                diameters = make_psd(simulation, frame)
             data_list.append(diameters)
     datafile = sim_id + '-psd.csv'
     datapath = TMP_PATH + datafile
@@ -157,42 +150,51 @@ def make_psdfile(sim_id,frame_low,frame_high,frame_interval,
     return datafile
 
 
-def calc_volume(frame,ps):
-    pm = frame['particle_MA']
-    pa = frame['particle_SM_active']
-    pi = frame['particle_SM_inactive']
+def calc_volume(simulation, frame):
+    pm = get_particle_MA(simulation, frame)
+    ps = get_particle_seed(simulation)
+    pa, pi = get_SM_particle_list(simulation, frame)
 
-    area_M = 1e-6 * calc_area_M(pm,ps,pa.values(),pi.values())
+    area_M = 1e-6 * calc_area_M(pm, ps, pa, pi)
     area_MA = 1e-6 * np.pi * pm.r**2
     area_seed = 1e-6 * np.pi * ps.r**2
     area_SM = area_MA - area_seed - area_M
     vol_MA = area_M * 1.0 # because rho_MA=1.0
     vol_SM = area_SM * 2.0 # because rho_SM=2.0
     vol_total = vol_MA + vol_SM
-    return vol_MA,vol_SM,vol_total
+    return vol_MA, vol_SM, vol_total
 
 
 # TODO: make the full range and interval=1 file to cache the result
 #       Next the same request will return directly
 #       render_volume will use the existing file to retieve data
-def make_volfile(sim_id,frame_low,frame_high,frame_interval):
-    simulations = db['simulations']
-    sim_uuid = uuid.UUID(sim_id)
-    simulation = simulations[sim_uuid]
-    frames = simulation['frames']
-
-    p = simulation['parameter']
-    ps = simulation['particle_seed']
-    frame_list = range(frame_low,frame_high+1,frame_interval)
+def make_volfile(sim_id, frame_low, frame_high, frame_interval):
+    simulation = get_simulation(sim_id)
+    pm = simulation['particle_MA']
+    p = get_parameter(simulation)
+    ps = get_particle_seed(simulation)
+    frame_list = range(frame_low, frame_high+1, frame_interval)
+    ti = get_ti(simulation)
     data_list = []
+    area_seed = 1e-6 * np.pi * ps.r**2
+    for tt in np.arange(0, ti, frame_interval * p.dt):
+        pm.grow_by_function(tt)
+        area_MA = 1e-6 * np.pi * pm.r**2
+        area_M = area_MA - area_seed
+        volm = area_M * 1.0
+        vols = 0
+        volt = volm
+        data_list.append((tt, volm, vols, volt))
     for frame_id in frame_list:
-        t = (frame_id + 1) * p.dt # t start from dt
-        frame = frames[frame_id]
-        volm,vols,volt = calc_volume(frame,ps)
-        data_list.append((t,volm,vols,volt))
+        t = ti + frame_id * p.dt # t starts from ti
+        frame = get_frame(simulation, frame_id)
+        volm, vols, volt = ([], [], [])
+        if not frame is None:
+            volm, vols, volt = calc_volume(simulation, frame)
+        data_list.append((t, volm, vols, volt))
     datafile = sim_id + '-vol.csv'
     datapath = TMP_PATH + datafile
-    with open(datapath,'wb') as f:
+    with open(datapath, 'wb') as f:
         writer = csv.writer(f)
         writer.writerows(data_list)
     return datafile
@@ -202,10 +204,7 @@ def make_volfile(sim_id,frame_low,frame_high,frame_interval):
 def render_volume():
     datafile = request.args.get('datafile')
     datapath = TMP_PATH + datafile
-    t_list = []
-    volm_list = []
-    vols_list = []
-    volt_list = []
+    t_list, volm_list, vols_list, volt_list = ([], [], [], [])
     with open(datapath,"rb") as f:
         reader = csv.reader(f)
         for row in reader:
@@ -243,7 +242,7 @@ def render_group_volume():
 
     sim_list = redis.get(qkey)
     for sim_id in sim_list.split(","):
-        batch_val = get_batch_value(sim_id,batchvar)
+        batch_val = get_batch_value(sim_id, batchvar)
         datapath = TMP_PATH + sim_id + '-vol.csv'
         t_list = []
         vol_list = []
@@ -259,17 +258,17 @@ def render_group_volume():
                 else:
                     vol_list.append(volt)
         label = batchvar + " = " + str(batch_val)
-        ax.plot(t_list,vol_list,label=label)
+        ax.plot(t_list, vol_list, label=label)
 
-    handles,labels = ax.get_legend_handles_labels()
-    ax.legend(handles,labels,loc='upper left')
-    ax.set_xlabel('$t$',size='x-large')
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles, labels, loc='upper left')
+    ax.set_xlabel('$t$', size='x-large')
     if vol_type == 'volm':
-        ax.set_ylabel('$V(1)$',size='x-large')
+        ax.set_ylabel('$V(1)$', size='x-large')
     elif vol_type == 'vols':
-        ax.set_ylabel('$V(0)$',size='x-large')
+        ax.set_ylabel('$V(0)$', size='x-large')
     else:
-        ax.set_ylabel('$V_t$',size='x-large')
+        ax.set_ylabel('$V_t$', size='x-large')
     canvas = FigureCanvas(fig)
     png_output = StringIO.StringIO()
     canvas.print_png(png_output)
@@ -278,30 +277,29 @@ def render_group_volume():
     return response
 
 
-def calc_n(frame):
-    pa = frame['particle_SM_active']
-    pi = frame['particle_SM_inactive']
-
+def calc_n(simulation, frame):
+    pa, pi = get_SM_particle_list(simulation, frame)
     return len(pa)+len(pi)
 
 
-def make_nucfile(sim_id,n_type,frame_low,frame_high,frame_interval):
-    simulations = db['simulations']
-    sim_uuid = uuid.UUID(sim_id)
-    simulation = simulations[sim_uuid]
-    frames = simulation['frames']
-
-    p = simulation['parameter']
-    ps = simulation['particle_seed']
+def make_nucfile(sim_id, n_type, frame_low, frame_high, frame_interval):
+    simulation = get_simulation(sim_id)
+    p = get_parameter(simulation)
+    ps = get_particle_seed(simulation)
     aseed = 1e-6 * np.pi * ps.r**2
-    frame_list = range(frame_low,frame_high+1,frame_interval)
+    frame_list = range(frame_low, frame_high+1, frame_interval)
+    ti = get_ti(simulation)
     data_list = []
+    for tt in np.arange(0, ti, frame_interval * p.dt):
+        data_list.append((tt,0))
     for frame_id in frame_list:
-        t = (frame_id + 1) * p.dt # t start from dt
-        frame = frames[frame_id]
-        n = calc_n(frame)
+        t = ti + frame_id * p.dt # t start from ti
+        frame = get_frame(simulation, frame_id)
+        n = 0
+        if not frame is None:
+            n = calc_n(simulation, frame)
         if n_type == 'density':
-            pm = frame['particle_MA']
+            pm = get_particle_MA(simulation, frame)
             am = 1e-6 * np.pi * pm.r**2
             n = n / (am - aseed)
         data_list.append((t,n))
@@ -317,8 +315,7 @@ def make_nucfile(sim_id,n_type,frame_low,frame_high,frame_interval):
 def render_nucleation():
     datafile = request.args.get('datafile')
     datapath = TMP_PATH + datafile
-    t_list = []
-    n_list = []
+    t_list, n_list = ([], [])
     with open(datapath,"rb") as f:
         reader = csv.reader(f)
         for row in reader:
@@ -328,9 +325,9 @@ def render_nucleation():
 
     fig = Figure()
     ax = fig.add_subplot(111)
-    ax.plot(t_list,n_list,marker='o',markeredgewidth=0)
-    ax.set_xlabel('$t$',size='x-large')
-    ax.set_ylabel('$n(t)/A(t)$',size='x-large')
+    ax.plot(t_list, n_list, marker='o', markeredgewidth=0)
+    ax.set_xlabel('$t$', size='x-large')
+    ax.set_ylabel('$n(t)/A(t)$', size='x-large')
 
     canvas = FigureCanvas(fig)
     png_output = StringIO.StringIO()
@@ -351,8 +348,7 @@ def render_group_nucleation():
     for sim_id in sim_list.split(","):
         batch_val = get_batch_value(sim_id,batchvar)
         datapath = TMP_PATH + sim_id + '-nuc.csv'
-        t_list = []
-        n_list = []
+        t_list, n_list = ([], [])
         with open(datapath,"rb") as f:
             reader = csv.reader(f)
             for row in reader:
@@ -373,14 +369,9 @@ def render_group_nucleation():
     response.headers['Content-Type'] = 'image/png'
     return response
 
-def get_batch_value(sim_id,batchvar):
-    sim_uuid = uuid.UUID(sim_id)
-    params = db['simulations'][sim_uuid]['parameter']
-    return getattr(params,batchvar)
 
-
-def archive_group_data(gname,batchvar,sim_list,psdcheck,volmcheck,
-                       volscheck,voltcheck,ncheck):
+def archive_group_data(gname, batchvar, sim_list, psdcheck, volmcheck,
+                       volscheck, voltcheck, ncheck):
     batchinfo = gname + "-" + batchvar + "-info.ini"
     psdfile = gname + "-psd-" + batchvar + ".csv"
     volmfile = gname + "-volm-" + batchvar + ".csv"
@@ -395,10 +386,10 @@ def archive_group_data(gname,batchvar,sim_list,psdcheck,volmcheck,
     #       2. frame_low, frame_high, frame_interval
     #       3. psdcheck, volmcheck, volscheck, voltcheck, and ncheck
     description = db['sim_groups'][gname]['description']
-    group_section = Group(gname,batchvar,sim_list,description)
+    group_section = Group(gname, batchvar, sim_list, description)
     simlist = sim_list.split(",")
-    sim_uuid = uuid.UUID(simlist[0])
-    params = db['simulations'][sim_uuid]['parameter']
+    simulation = get_simulation(simlist[0])
+    params = get_parameter(simulation)
     param_section = Parameters(params)
     group_info = GroupInfo(group_section,param_section)
     group_info.write(TMP_PATH+batchinfo)

@@ -24,9 +24,9 @@ from ZODB.DB import DB
 import transaction
 from persistent import Persistent
 from persistent.mapping import PersistentMapping
-from BTrees import IOBTree,OOBTree
+from BTrees import IOBTree, OOBTree
 
-from ngpy import app
+from ngpy import app, db
 
 from .particle import Particle
 from .vector2d import Vector2D
@@ -245,9 +245,125 @@ def cancel_simulation(redis,sim_id):
     redis.rpush(qkey,s)
 
 
-def Particles(Persistent):
-    def __init__(self):
-        self._particles = IOBTree.IOBTree()
+#def Particles(Persistent):
+#    def __init__(self):
+#        self._particles = IOBTree.IOBTree()
+
+
+def get_batch_value(sim_id, batchvar):
+    sim_uuid = uuid.UUID(sim_id)
+    params = db['simulations'][sim_uuid]['parameter']
+    return getattr(params,batchvar)
+
+
+def get_ti(simulation):
+    if not simulation.has_key('t_i'):
+        return 0
+    return simulation['t_i']
+
+
+def get_simulation(sim_id):
+    ''' sim_id is a uuid4 string. '''
+    simulations = db['simulations']
+    sim_uuid = uuid.UUID(sim_id)
+    if not simulations.has_key(sim_uuid):
+        return None
+    return simulations[sim_uuid]
+
+
+def get_num_frames(simulation):
+    if not simulation.has_key('frames'):
+        return 0
+    return len(simulation['frames'])
+
+
+def get_frame(simulation, frame_id):
+    if not simulation.has_key('frames'):
+        return None
+    frames = simulation['frames']
+    if not frames.has_key(frame_id):
+        return None
+    return frames[frame_id]
+
+
+def get_frame_max(simulation):
+    if not simulation.has_key('frames'):
+        return -1
+    frames = simulation['frames']
+    return frames.maxKey()
+
+
+def get_frame_interval(simulation):
+    param = get_parameter(simulation)
+    return param.interval_save
+
+
+def get_particle_MA(simulation, frame):
+    if not simulation.has_key('particle_MA'):
+        raise ValueError('Error: simulation does not have particle_MA.')
+    pm = copy.deepcopy(simulation['particle_MA'])
+    pm.r = get_particle_MA_r(frame)
+    return pm 
+
+
+def get_particle_seed(simulation):
+    if not simulation.has_key('particle_seed'):
+        raise ValueError('Error: simulation does not have particle_seed.')
+    return simulation['particle_seed']
+
+
+def get_particle_SM_list_global(simulation):
+    if not simulation.has_key('particle_SM'):
+        raise ValueError('Error: simulation does not have particle_SM.')
+    return simulation['particle_SM']
+
+
+def get_parameter(simulation):
+    if not simulation.has_key('parameter'):
+        raise ValueError('Error: simulation does not have parameter.')
+    return simulation['parameter']
+
+
+def get_particle_SM_list_frame(frame):
+    if not frame.has_key('SM'):
+        raise ValueError('Error: frame does not have particle_SM list.')
+    return frame['SM']
+
+
+def get_t(frame):
+    if not frame.has_key('t'):
+        raise ValueError('Error: frame does not have t.')
+    return frame['t']
+
+
+def get_particle_MA_r(frame):
+    if not frame.has_key('r_MA'):
+        raise ValueError('Error: frame does not have r_MA.')
+    return frame['r_MA']
+
+
+def get_SM_particle_list(simulation, frame):
+    SM_list_g = get_particle_SM_list_global(simulation)
+    pid_list = get_particle_SM_list_frame(frame)
+    t = get_t(frame)
+    if not pid_list:
+        return ([], [])
+
+    pa = []
+    pi = []
+    for pid in pid_list:
+        if SM_list_g.has_key(pid):
+            p = copy.deepcopy(SM_list_g[pid])
+            if p.te > 0 and (t - p.te) > 1e-6:
+                p.grow_by_function(p.te)
+                pi.append(p)
+            else:
+                p.grow_by_function(t)
+                pa.append(p)
+        else:
+            pass
+            #raise ValueError('particle in frame is not in global list.')
+    return (pa, pi)
 
 
 def test():

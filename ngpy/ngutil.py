@@ -44,6 +44,8 @@ class FormParam(Persistent):
         self.n_SM = form.n_SM.data
         self.r_seed = form.r_seed.data
         self.r_test = form.r_test.data
+        self.interval_save = form.interval_save.data
+
     def setval(self,attr,val):
         setattr(self,attr,val)
         # do extra relations
@@ -93,6 +95,7 @@ class Parameters(object):
         self.n_SM = form.n_SM
         self.r_seed = form.r_seed
         self.r_test = form.r_test
+        self.interval_save = form.interval_save
 
 
 class GroupInfo(object):
@@ -140,6 +143,7 @@ class GroupInfo(object):
         self.param.n_SM = ini.getfloat('Param','n_SM')
         self.param.r_seed = ini.getfloat('Param','r_seed')
         self.param.r_test = ini.getfloat('Param','r_test')
+        self.param.interval_save = ini.getfloat('Param','interval_save')
 
     def write(self,inifile):
         ini = SafeConfigParser()
@@ -170,6 +174,7 @@ class GroupInfo(object):
         ini.set('Param','n_SM',str(self.param.n_SM))
         ini.set('Param','r_seed',str(self.param.r_seed))
         ini.set('Param','r_test',str(self.param.r_test))
+        ini.set('Param','interval_save',str(self.param.interval_save))
         # write file
         with open(inifile,'w') as f:
             ini.write(f)

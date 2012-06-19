@@ -8,9 +8,9 @@ from ngpy import app
 parser = argparse.ArgumentParser()
 parser.add_argument('-c','--config',
                     default='/export/home/lyx/opt/lyx/ngpy/ngpy.cfg',
-                    help='the location of NGPy configuration file')
+                    help='the location of NGPy configuration file.')
 parser.add_argument('-s','--host',default='0.0.0.0',
-                    help='the host your app is served')
+                    help='the host your app is served.')
 
 args = parser.parse_args()
 os.environ['NGPY_CONFIG'] = args.config

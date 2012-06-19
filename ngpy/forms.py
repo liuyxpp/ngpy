@@ -56,7 +56,7 @@ class NewSimulationForm(Form):
     n_SM = FloatField(u'n_SM',[Required(),NumberRange(1e-9,1e9)])
     r_seed = FloatField(u'r_seed',[Required(),NumberRange(0,1e6)])
     r_test = FloatField(u'r_test',[Required(),NumberRange(0,1e6)])
-
+    interval_save = IntegerField(u'interval_save',[Required()])
 
 
 class SearchSimulationForm(Form):
@@ -108,7 +108,8 @@ class SearchSimulationForm(Form):
     from_r_test = FloatField(u'The range of r_test')
     to_r_test = FloatField(u'To r_test')
 
-    set_create_time = BooleanField(u'Set range for create_time (format: %Y-%m-%d %H:%M:%S)')
+    set_create_time = BooleanField(
+                u'Set range for create_time (format: %Y-%m-%d %H:%M:%S)')
     from_create_time = DateTimeField(u'The range of create_time')
     to_create_time = DateTimeField(u'To date')
 
