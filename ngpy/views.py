@@ -108,23 +108,23 @@ def view_group():
         return redirect(url_for("error",message="No group "+gname))
     group = groups[gname]
     batchvar = group['batchvar']
-    group_simulations = find_simulations_by_group(db,gname,True)
+    group_simulations = find_simulations_by_group(db, gname, True)
     # find the max available frame number
-    skey,s0 = group_simulations[0]
+    skey, s0 = group_simulations[0]
     dt = s0['parameter'].dt
     max_t = s0['parameter'].max_t
     frame_max = int(round(max_t/dt)) - 1
+    frame_interval = get_frame_interval(s0)
     # number of frames for each simulation
     frame_list = {}
-    for (sim_id,s0) in group_simulations:
-        sim_uuid = uuid.UUID(sim_id)
-        simulation = db['simulations'][sim_uuid]
-        frame_list[sim_id] = len(simulation['frames']) - 1
+    for (sim_id,sim) in group_simulations:
+        frame_list[sim_id] = get_num_frames(sim)
     return render_template("group.html",
-                           gname=gname,group=group,
+                           gname=gname, group=group,
                            batchvar=batchvar,
                            frame_max=frame_max,
-                           framelist = frame_list,
+                           frame_interval=frame_interval,
+                           framelist=frame_list,
                            number_simulations=len(group_simulations),
                            group_simulations=group_simulations
                           )

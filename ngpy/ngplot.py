@@ -13,6 +13,7 @@ import os
 import csv
 import tarfile
 import uuid
+import copy
 
 import numpy as np
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
@@ -170,7 +171,7 @@ def calc_volume(simulation, frame):
 #       render_volume will use the existing file to retieve data
 def make_volfile(sim_id, frame_low, frame_high, frame_interval):
     simulation = get_simulation(sim_id)
-    pm = simulation['particle_MA']
+    pm = copy.deepcopy(simulation['particle_MA'])
     p = get_parameter(simulation)
     ps = get_particle_seed(simulation)
     frame_list = range(frame_low, frame_high+1, frame_interval)

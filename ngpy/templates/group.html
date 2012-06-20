@@ -6,6 +6,7 @@
 <script type=text/javascript>
     $(function() {
         var frame_max = $('#framemax').val();
+        var frame_interval = $('#frameinterval').val();
         $('#simulations .selectAll').click(function(event){
             event.preventDefault();
             $(this).siblings('#simulations input:checkbox').attr('checked','checked');
@@ -15,10 +16,13 @@
             $(this).siblings('#simulations input:checkbox').removeAttr('checked');
         });
         var spinnersim = $('#spinnersim').spinner({
+            min:0,
+            max:frame_max,
+            step:frame_interval,
             spin:function(event,ui){
                 var fid = ui.value;
                 if(fid>frame_max){
-                    $(this).spinner("value",1);
+                    $(this).spinner("value",frame_interval);
                     return false;
                 }
                 else if(fid<1){
@@ -27,11 +31,12 @@
                 }
             }
         });
-        $('#spinnersim').val(1);
+        $('#spinnersim').val(frame_interval);
         var slidersim = $('#slidersim').slider({
             range:true,
             min:0,
             max:frame_max,
+            step:frame_interval,
             values:[0,frame_max],
             slide:function(event,ui){
                     $("#framerange").val(ui.values[0]+"-"+ui.values[1]);
@@ -96,6 +101,7 @@
     <input id=gname type=hidden value={{ gname }} />
     <input id=batchvar type=hidden value={{ batchvar }} />
     <input id=framemax type=hidden value={{ frame_max }} />
+    <input id=frameinterval type=hidden value={{ frame_interval }} />
 
   <h3>Analyze Group</h3>
     <fieldset id="simulations">
