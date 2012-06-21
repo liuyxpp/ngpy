@@ -1,6 +1,7 @@
 syntax: glob
 *.pyc
 *.swp
+ADMIN.txt
 flask-examples
 css-examples
 dist
