@@ -1,0 +1,5 @@
+1. Improve the views, espcially the home and the search page.
+
+2. A script to run all services at one time.
+
+3. A script to check all services if they are running properly.

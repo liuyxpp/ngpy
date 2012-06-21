@@ -58,20 +58,22 @@
                     batchvar:$('#batchvar').val(),
                     simlist:sim_list.join(","),
                     psdcheck:$('#psdcheck:checked').length,
+                    ncheck:$('#ncheck:checked').length,
                     volmcheck:$('#volmcheck:checked').length,
                     volscheck:$('#volscheck:checked').length,
                     voltcheck:$('#voltcheck:checked').length,
-                    ncheck:$('#ncheck:checked').length,
+                    tccheck:$('#tccheck:checked').length,
                     ntype:'density',
                     framelow:frame_low,
                     framehigh:frame_high,
                     frameinterval:frame_interval
                     }, 
                     function(data){
+                        $('#nimg').attr("src",data.nsrc);
                         $('#volmimg').attr("src",data.volmsrc);
                         $('#volsimg').attr("src",data.volssrc);
                         $('#voltimg').attr("src",data.voltsrc);
-                        $('#nimg').attr("src",data.nsrc);
+                        $('#tcimg').attr("src",data.tcsrc);
                         $('#data').attr("href",data.datahref).text(data.datatext);
                         },
                         "json"
@@ -79,10 +81,11 @@
         }
         $('#analyze').button();
         $('#analyze').click(function(){
+            $('#nimg').removeAttr("src","");
             $('#volmimg').removeAttr("src");
             $('#volsimg').removeAttr("src","");
             $('#voltimg').removeAttr("src","");
-            $('#nimg').removeAttr("src","");
+            $('#tcimg').removeAttr("src","");
             $('#data').attr("href","#").text("Data to be calculated");
             analyze();
         });
@@ -127,23 +130,27 @@
     <h4>Following analysis will be included</h4>
     <input name="analysis" id="psdcheck" type="checkbox" value="psd">
     <label for="psd">PSD</label>
+    <input name="analysis" id="ncheck" type="checkbox" value="nuc">
+    <label for="ncheck">N(t)</label>
     <input name="analysis" id="volmcheck" type="checkbox" value="volm">
     <label for="volmcheck">Vm(t)</label>
     <input name="analysis" id="volscheck" type="checkbox" value="vols">
     <label for="volscheck">Vs(t)</label>
     <input name="analysis" id="voltcheck" type="checkbox" value="volt">
     <label for="voltcheck">Vt(t)</label>
-    <input name="analysis" id="ncheck" type="checkbox" value="nuc">
-    <label for="ncheck">N(t)</label>
+    <input name="analysis" id="tccheck" type="checkbox" value="tc">
+    <label for="voltcheck">t_c</label>
 
     <h4>Results</h4>
+    <img id="nimg" src="" alt="N(t) to be calculated..." />
+    <br />
     <img id="volmimg" src="" alt="Vm(t) to be calculated..." />
     <br />
     <img id="volsimg" src="" alt="Vs(t) to be calculated..." />
     <br />
     <img id="voltimg" src="" alt="Vt(t) to be calculated..." />
     <br />
-    <img id="nimg" src="" alt="N(t) to be calculated..." />
+    <img id="tcimg" src="" alt="tc to be calculated..." />
     <br />
     <p>
       <label for="downvol">Download data source:</label>

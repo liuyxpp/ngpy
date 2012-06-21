@@ -10,20 +10,20 @@ from ngpy import app, db, redis
 import numpy as np
 
 from .forms import NewSimulationForm, SelectSimulationForm
-from .forms import SearchSimulationForm,NewGroupForm
+from .forms import SearchSimulationForm, NewGroupForm
 from .ngzodb import setup_simulation, update_simulation, del_simulation
-from .ngzodb import find_simulations,setup_group,update_group
+from .ngzodb import find_simulations, setup_group, update_group
 from .ngzodb import find_simulations_by_group
-from .ngzodb import execute_simulation,cancel_simulation
+from .ngzodb import execute_simulation, cancel_simulation
 from .ngzodb import get_simulation, get_parameter, get_frame
 from .ngzodb import get_particle_seed
 from .ngzodb import get_frame_max, get_frame_interval, get_num_frames
 from .ngutil import FormParam, now2str
-from .ngplot import render_simulation_frame,render_psd,calc_volume,calc_n
-from .ngplot import render_volume,render_nucleation
+from .ngplot import render_simulation_frame, render_psd,calc_volume, calc_n
+from .ngplot import render_volume, render_nucleation
 from .ngplot import render_group_nucleation
-from .ngplot import make_psdfile,make_nucfile,make_volfile
-from .ngplot import archive_group_data
+from .ngplot import make_psdfile, make_nucfile, make_volfile
+from .ngplot import make_tcfile, archive_group_data
 
 @app.route('/',methods=['GET','POST'])
 def index():
@@ -136,10 +136,11 @@ def group_analysis_feed():
     batchvar = request.form['batchvar']
     sim_list = request.form['simlist']
     psdcheck = int(request.form['psdcheck']) # bool(u'0') is True! use int
+    ncheck = int(request.form['ncheck'])
     volmcheck = int(request.form['volmcheck'])
     volscheck = int(request.form['volscheck'])
     voltcheck = int(request.form['voltcheck'])
-    ncheck = int(request.form['ncheck'])
+    tccheck = int(request.form['tccheck'])
     n_type = request.form['ntype']
     frame_low = int(request.form['framelow'])
     frame_high = int(request.form['framehigh'])
@@ -157,16 +158,23 @@ def group_analysis_feed():
         if psdcheck:
             psdfile = make_psdfile(sim_id,
                                    frame_low, frame_high, frame_interval)
-        if volmcheck or volscheck or voltcheck:
-            volfile = make_volfile(sim_id,
-                                   frame_low, frame_high, frame_interval)
         if ncheck:
             nucfile = make_nucfile(sim_id, n_type,
                                    frame_low, frame_high, frame_interval)
+        if volmcheck or volscheck or voltcheck:
+            volfile = make_volfile(sim_id,
+                                   frame_low, frame_high, frame_interval)
+    if tccheck:
+        tcfile = make_tcfile(sim_list, gname, batchvar)
+    nsrc = ""
     volmsrc = ""
     volssrc = ""
     voltsrc = ""
-    nsrc = ""
+    tcsrc = ""
+    if ncheck:
+        # add timestamp to enforce refreshing image
+        nsrc = url_for("render_group_nucleation",
+                       qkey=qkey, batchvar=batchvar, t=str(time()))
     if volmcheck:
         # add timestamp to enforce refreshing image
         volmsrc = url_for("render_group_volume",
@@ -182,20 +190,21 @@ def group_analysis_feed():
         voltsrc = url_for("render_group_volume",
                           voltype='volt',
                           qkey=qkey, batchvar=batchvar, t=str(time()))
-    if ncheck:
+    if tccheck:
         # add timestamp to enforce refreshing image
-        nsrc = url_for("render_group_nucleation",
-                       qkey=qkey, batchvar=batchvar, t=str(time()))
+        tcsrc = url_for("render_group_tc",
+                          datafile=tcfile, t=str(time()))
     datahref = "#"
     datatext = "At least select one term to analyze"
-    if psdcheck or volmcheck or volscheck or voltcheck or ncheck:
+    if psdcheck or ncheck or volmcheck or volscheck or voltcheck or tccheck:
         datatext = archive_group_data(gname, batchvar, sim_list,
-                                      psdcheck, volmcheck,
-                                      volscheck, voltcheck, ncheck)
+                                      psdcheck, ncheck, volmcheck,
+                                      volscheck, voltcheck, tccheck)
         datahref = url_for("static", filename="tmp/"+datatext)
     return jsonify(volmsrc=volmsrc,
                    volssrc=volssrc,
                    voltsrc=voltsrc,
+                   tcsrc=tcsrc,
                    nsrc=nsrc,
                    datahref=datahref,
                    datatext=datatext

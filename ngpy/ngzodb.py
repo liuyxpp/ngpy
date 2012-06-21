@@ -251,9 +251,9 @@ def cancel_simulation(redis,sim_id):
 
 
 def get_batch_value(sim_id, batchvar):
-    sim_uuid = uuid.UUID(sim_id)
-    params = db['simulations'][sim_uuid]['parameter']
-    return getattr(params,batchvar)
+    simulation = get_simulation(sim_id)
+    params = get_parameter(simulation)
+    return getattr(params, batchvar)
 
 
 def get_ti(simulation):
@@ -284,6 +284,14 @@ def get_frame(simulation, frame_id):
     if not frames.has_key(frame_id):
         return None
     return frames[frame_id]
+
+
+def get_frames(simulation):
+    ''' simulation['frames'] is an OOBTree. '''
+    if not simulation.has_key('frames'):
+        return []
+    frames = simulation['frames']
+    return frames.values()
 
 
 def get_frame_max(simulation):

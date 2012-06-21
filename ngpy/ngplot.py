@@ -26,7 +26,7 @@ from ngpy import app,db,redis
 
 from .ngofflattice_kooi import calc_area_M
 from .ngutil import Group, Parameters, GroupInfo
-from .ngzodb import get_batch_value, get_simulation, get_frame
+from .ngzodb import get_batch_value, get_simulation, get_frame, get_frames
 from .ngzodb import get_particle_MA, get_particle_seed
 from .ngzodb import get_parameter, get_t, get_ti, get_particle_MA_r
 from .ngzodb import get_particle_SM_list_global, get_particle_SM_list_frame
@@ -187,8 +187,9 @@ def make_volfile(sim_id, frame_low, frame_high, frame_interval):
         volt = volm
         data_list.append((tt, volm, vols, volt))
     for frame_id in frame_list:
-        t = ti + frame_id * p.dt # t starts from ti
+        #t = ti + frame_id * p.dt # t starts from ti
         frame = get_frame(simulation, frame_id)
+        t = get_t(frame)
         volm, vols, volt = ([], [], [])
         if not frame is None:
             volm, vols, volt = calc_volume(simulation, frame)
@@ -278,6 +279,55 @@ def render_group_volume():
     return response
 
 
+def make_tcfile(sim_list, gname, batchvar):
+    data_list = []
+    for sim_id in sim_list.split(','):
+        batch_val = get_batch_value(sim_id, batchvar)
+        simulation = get_simulation(sim_id)
+        for frame in get_frames(simulation):
+            volm, vols, volt = calc_volume(simulation, frame)
+            if volm - vols <= 0.0:
+                t = get_t(frame)
+                data_list.append((batch_val, t))
+                break
+
+    datafile = gname + '-tc-' + batchvar + '.csv'
+    datapath = TMP_PATH + datafile
+    with open(datapath,'wb') as f:
+        writer = csv.writer(f)
+        # NOTE: each psd-data will be saved as a row other than a column
+        writer.writerows(data_list)
+    return datafile
+
+
+@app.route("/_group_tc")
+def render_group_tc():
+    datafile = request.args.get('datafile')
+    datapath = TMP_PATH + datafile
+    batchval_list, tc_list = ([], [])
+    with open(datapath,"rb") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            batchval, tc = row
+            batchval_list.append(batchval)
+            tc_list.append(tc)
+
+    fig=Figure()
+    ax=fig.add_subplot(111)
+    ax.plot(batchval_list, tc_list, 's', label='Cross Time')
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles, labels, loc='upper left')
+    ax.set_xlabel('batch var',size='x-large')
+    ax.set_ylabel('$t_c$',size='x-large')
+
+    canvas = FigureCanvas(fig)
+    png_output = StringIO.StringIO()
+    canvas.print_png(png_output)
+    response = make_response(png_output.getvalue())
+    response.headers['Content-Type'] = 'image/png'
+    return response
+
+
 def calc_n(simulation, frame):
     pa, pi = get_SM_particle_list(simulation, frame)
     return len(pa)+len(pi)
@@ -294,8 +344,9 @@ def make_nucfile(sim_id, n_type, frame_low, frame_high, frame_interval):
     for tt in np.arange(0, ti, frame_interval * p.dt):
         data_list.append((tt,0))
     for frame_id in frame_list:
-        t = ti + frame_id * p.dt # t start from ti
+        #t = ti + frame_id * p.dt # t start from ti
         frame = get_frame(simulation, frame_id)
+        t = get_t(frame)
         n = 0
         if not frame is None:
             n = calc_n(simulation, frame)
@@ -303,7 +354,7 @@ def make_nucfile(sim_id, n_type, frame_low, frame_high, frame_interval):
             pm = get_particle_MA(simulation, frame)
             am = 1e-6 * np.pi * pm.r**2
             n = n / (am - aseed)
-        data_list.append((t,n))
+        data_list.append((t, n))
     datafile = sim_id + '-nuc.csv'
     datapath = TMP_PATH + datafile
     with open(datapath,'wb') as f:
@@ -371,14 +422,15 @@ def render_group_nucleation():
     return response
 
 
-def archive_group_data(gname, batchvar, sim_list, psdcheck, volmcheck,
-                       volscheck, voltcheck, ncheck):
+def archive_group_data(gname, batchvar, sim_list, psdcheck, ncheck, 
+                       volmcheck, volscheck, voltcheck, tccheck):
     batchinfo = gname + "-" + batchvar + "-info.ini"
     psdfile = gname + "-psd-" + batchvar + ".csv"
+    nfile = gname + "-N-" + batchvar + ".csv"
     volmfile = gname + "-volm-" + batchvar + ".csv"
     volsfile = gname + "-vols-" + batchvar + ".csv"
     voltfile = gname + "-volt-" + batchvar + ".csv"
-    nfile = gname + "-N-" + batchvar + ".csv"
+    tcfile = gname + "-tc-" + batchvar + ".csv"
     # datafile is an archive of all above files
     datafile = gname + "-" + batchvar + ".tar.bz2"
     # .ini file
@@ -392,14 +444,15 @@ def archive_group_data(gname, batchvar, sim_list, psdcheck, volmcheck,
     simulation = get_simulation(simlist[0])
     params = get_parameter(simulation)
     param_section = Parameters(params)
-    group_info = GroupInfo(group_section,param_section)
+    group_info = GroupInfo(group_section, param_section)
     group_info.write(TMP_PATH+batchinfo)
     # data file
     psd_group_list = []
+    n_group_list = []
     volm_group_list = []
     vols_group_list = []
     volt_group_list = []
-    n_group_list = []
+    tc_group_list = []
     for sim_id in sim_list.split(","):
         if psdcheck:
             datapath = TMP_PATH + sim_id + '-psd.csv'
@@ -407,6 +460,18 @@ def archive_group_data(gname, batchvar, sim_list, psdcheck, volmcheck,
                 reader = csv.reader(f)
                 for row in reader:
                     psd_group_list.append(row)
+        if ncheck:
+            datapath = TMP_PATH + sim_id + '-nuc.csv'
+            with open(datapath,"rb") as f:
+                reader = csv.reader(f)
+                i = 1
+                for row in reader:
+                    t, n = row
+                    if len(n_group_list) < i:
+                        n_group_list.append([t,n])
+                    else:
+                        n_group_list[i-1].append(n)
+                    i = i + 1
         if volmcheck or volscheck or voltcheck:
             datapath = TMP_PATH + sim_id + '-vol.csv'
             with open(datapath,"rb") as f:
@@ -434,22 +499,14 @@ def archive_group_data(gname, batchvar, sim_list, psdcheck, volmcheck,
                         else:
                             volt_group_list[k-1].append(volt)
                         k = k + 1
-        if ncheck:
-            datapath = TMP_PATH + sim_id + '-nuc.csv'
-            with open(datapath,"rb") as f:
-                reader = csv.reader(f)
-                i = 1
-                for row in reader:
-                    t, n = row
-                    if len(n_group_list) < i:
-                        n_group_list.append([t,n])
-                    else:
-                        n_group_list[i-1].append(n)
-                    i = i + 1
     if psdcheck:
         with open(TMP_PATH + psdfile,"wb") as f:
             writer = csv.writer(f)
             writer.writerows(psd_group_list)
+    if ncheck:
+        with open(TMP_PATH + nfile,"wb") as f:
+            writer = csv.writer(f)
+            writer.writerows(n_group_list)
     if volmcheck:
         with open(TMP_PATH + volmfile,"wb") as f:
             writer = csv.writer(f)
@@ -462,10 +519,6 @@ def archive_group_data(gname, batchvar, sim_list, psdcheck, volmcheck,
         with open(TMP_PATH + voltfile,"wb") as f:
             writer = csv.writer(f)
             writer.writerows(volt_group_list)
-    if ncheck:
-        with open(TMP_PATH + nfile,"wb") as f:
-            writer = csv.writer(f)
-            writer.writerows(n_group_list)
 
     with tarfile.open(TMP_PATH+datafile,"w:bz2") as tar:
         def resetini(tarinfo):
@@ -473,6 +526,9 @@ def archive_group_data(gname, batchvar, sim_list, psdcheck, volmcheck,
             return tarinfo
         def resetpsd(tarinfo):
             tarinfo.name = psdfile
+            return tarinfo
+        def resetn(tarinfo):
+            tarinfo.name = nfile
             return tarinfo
         def resetvolm(tarinfo):
             tarinfo.name = volmfile
@@ -483,19 +539,21 @@ def archive_group_data(gname, batchvar, sim_list, psdcheck, volmcheck,
         def resetvolt(tarinfo):
             tarinfo.name = voltfile
             return tarinfo
-        def resetn(tarinfo):
-            tarinfo.name = nfile
+        def resettc(tarinfo):
+            tarinfo.name = tcfile
             return tarinfo
         tar.add(TMP_PATH+batchinfo,filter=resetini)
         if psdcheck:
             tar.add(TMP_PATH+psdfile,filter=resetpsd)
+        if ncheck:
+            tar.add(TMP_PATH+nfile,filter=resetn)
         if volmcheck:
             tar.add(TMP_PATH+volmfile,filter=resetvolm)
         if volscheck:
             tar.add(TMP_PATH+volsfile,filter=resetvols)
         if voltcheck:
             tar.add(TMP_PATH+voltfile,filter=resetvolt)
-        if ncheck:
-            tar.add(TMP_PATH+nfile,filter=resetn)
+        if tccheck:
+            tar.add(TMP_PATH+tcfile,filter=resettc)
     return datafile
 
