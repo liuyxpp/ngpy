@@ -90,7 +90,8 @@ Ask for Help
 Links
 `````
 
-* `Website <http://liuyxpp.bitbucket.org>`_
+* `Website <https://liuyxpp.bitbucket.org>`_
 
-* `Development version <http://bitbucket.org/liuyxpp/ngpy/>`_
+* `Development version <https://bitbucket.org/liuyxpp/ngpy/>`_
 
+* `Dr. Yi-Xin Liu's website <http://ngpy.org>`_

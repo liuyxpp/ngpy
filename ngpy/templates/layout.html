@@ -5,15 +5,15 @@
     <link rel=stylesheet type=text/css href="{{ url_for('static', filename='style.css') }}">
     <!-- <link rel=stylesheet type=text/css href="{{ url_for('static', filename='themes/base/jquery.ui.all.css') }}"> -->
     <link rel="stylesheet" type="text/css" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.21/themes/ui-lightness/jquery-ui.css">
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.js"></script>
+    <script>window.jQuery || document.write('<script src="{{ url_for('static',filename='jquery-1.6.4.js') }}">\x3C/script>')</script>
+    <!-- <script type=text/javascript src={{ url_for('static', filename='jquery-1.6.4.js') }}></script> -->
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.21/jquery-ui.js"></script>
 </head>
 <body>
-<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.js"></script>
-<script>window.jQuery || document.write('<script src="{{ url_for('static',filename='jquery-1.6.4.js') }}">\x3C/script>')</script>
-<script type=text/javascript src={{ url_for('static', filename='jquery-1.6.4.js') }}></script>
 <script type=text/javascript>
     $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
 </script>
-<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.8.21/jquery-ui.js"></script>
 <script type=text/javascript src={{ url_for('static', filename='ui/jquery.ui.core.js') }}></script>
 <script type=text/javascript src={{ url_for('static', filename='ui/jquery.ui.widget.js') }}></script>
 <!-- jquery.ui.mouse.js must be placed befored jquery.ui.slider.js -->
