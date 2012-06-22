@@ -123,7 +123,7 @@ setup(
         'redis>=2.4.9',
     ],
     classifiers=[
-        'Development Status :: 2 - Beta',
+        'Development Status :: 4 - Beta',
         'Environment :: Web Environment',
         'Intended Audience :: Science/Research',
         'Intended Audience :: Developers',

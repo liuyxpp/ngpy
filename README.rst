@@ -68,7 +68,7 @@ or
     $ run-ngpy [-c </path/to/ngpy.cfg>]
 
 The *ngpy.cfg* is the configuration file for **ngpy**. 
-It is a Python file and will be processed by *Flask*.
+It is a Python file and will be processed by **Flask**.
 Only values in uppercase are actually used.
 More details are refered to the **Flask** documentation.
 
